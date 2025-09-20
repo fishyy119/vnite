@@ -1,8 +1,8 @@
-import { Button } from '~/components/ui/button'
-import React, { useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
-import { cn, scrollToElement } from '~/utils'
+import React, { useEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
+import { Button } from '~/components/ui/button'
+import { cn, scrollToElement } from '~/utils'
 
 interface PositionButtonProps {
   className?: string
@@ -50,8 +50,14 @@ export const PositionButton = React.memo(function PositionButton({
     const currentGameId = pathname.split('/games/')[1]?.split('/')[0]
     const currentGroupId = decodeURIComponent(pathname.split('/games/')[1]?.split('/')[1] || '')
 
-    if (!currentGameId || !currentGroupId) return ''
-    return `[data-game-id="${currentGameId}"][data-group-id="${currentGroupId}"]`
+    if (!currentGameId) return ''
+
+    const fullSelector = `[data-game-id="${currentGameId}"][data-group-id="${currentGroupId}"]`
+    if (currentGroupId && document.querySelector(fullSelector)) {
+      return fullSelector
+    }
+
+    return `[data-game-id="${currentGameId}"]`
   }
 
   // Scroll to target element
