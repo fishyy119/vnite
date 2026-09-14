@@ -4,7 +4,10 @@ import { GameDBManager } from '~/core/database'
 export async function saveGameIconByFile(gameId: string, filePath: string): Promise<void> {
   try {
     // Get file icon
-    const icon = await app.getFileIcon(filePath)
+    const icon = await app.getFileIcon(filePath, { size: 'large' })
+    if (icon.isEmpty()) {
+      throw new Error(`Failed to read file icon: ${filePath}`)
+    }
 
     // Save icon
     await GameDBManager.setGameImage(gameId, 'icon', icon.toPNG())
