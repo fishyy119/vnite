@@ -61,7 +61,7 @@ function replaceDescriptionMediaUrls(
  * the `attachment://` scheme, because such cached media are excluded from extraction and may be
  * removed as orphaned attachments.
  */
-export async function cacheDescriptionImages(description: string, gameId: string): Promise<void> {
+export async function cacheDescriptionImages(gameId: string, description: string): Promise<void> {
   const cacheEnabled = await ConfigDBManager.getConfigValue(
     'game.scraper.common.cacheDescriptionImages'
   )

@@ -977,7 +977,7 @@ export async function updateGameMetadata({
     // Execute all database operations in parallel
     await Promise.all(dbPromises)
 
-    await cacheDescriptionImages(updatedMetadata.description, dbId)
+    await cacheDescriptionImages(dbId, updatedMetadata.description)
   } catch (error) {
     log.error('[MetadataUpdater] Failed to update game metadata:', error)
     throw error
