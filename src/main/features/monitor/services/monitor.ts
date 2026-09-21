@@ -667,9 +667,13 @@ export class GameMonitor {
 
     updateRecentGamesInTray()
 
+    const autoBackupSave = await GameDBManager.getGameValue(
+      this.options.gameId,
+      'save.autoBackupSave'
+    )
     const savePaths = await GameDBManager.getGameLocalValue(this.options.gameId, 'path.savePaths')
 
-    if (filteredTimers.length > 0 && savePaths.some(Boolean)) {
+    if (autoBackupSave && filteredTimers.length > 0 && savePaths.some(Boolean)) {
       await backupGameSave(this.options.gameId)
     }
 
