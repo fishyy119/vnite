@@ -561,7 +561,6 @@ export class GameMonitor {
         mainWindow.focus()
       }
     } catch (error) {
-      // 窗口恢复属于非关键体验；读取或显示失败不能阻断退出事件和时长保存。
       log.warn('[Monitor] Failed to restore the window after game exit:', error)
     }
   }
@@ -581,7 +580,7 @@ export class GameMonitor {
     // Record end time
     this.endTime = new Date().toISOString()
 
-    // 窗口恢复与退出收尾并行执行，避免非关键配置读取拖住退出事件和时长保存。
+    // Restore the window in parallel so non-critical config reads do not delay exit handling or playtime persistence.
     void this.restoreWindowAfterGameExit()
 
     ipcManager.send('game:exiting', this.options.gameId)
@@ -653,7 +652,9 @@ export class GameMonitor {
       playTime += new Date(timer.end).getTime() - new Date(timer.start).getTime()
     }
 
-    // check existence before adding records
+    // The game may have been deleted before its monitor receives the stop signal.
+    // Do not write in that case: setGameValue would recreate a partial "ghost" document that
+    // contains record fields but lacks required data such as metadata, breaking downstream assumptions.
     if (await GameDBManager.getGame(this.options.gameId)) {
       await GameDBManager.setGameValue(this.options.gameId, 'record.timers', dbTimers)
       await GameDBManager.setGameValue(this.options.gameId, 'record.lastRunDate', this.endTime)
