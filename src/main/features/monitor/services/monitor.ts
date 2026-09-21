@@ -669,7 +669,7 @@ export class GameMonitor {
 
     const savePaths = await GameDBManager.getGameLocalValue(this.options.gameId, 'path.savePaths')
 
-    if (savePaths.some(Boolean)) {
+    if (filteredTimers.length > 0 && savePaths.some(Boolean)) {
       await backupGameSave(this.options.gameId)
     }
 
