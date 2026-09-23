@@ -1,4 +1,9 @@
-import { STORAGE_SIZE_NOT_CALCULATED, type MaxPlayTimeDay, type gameDoc } from '@appTypes/models'
+import {
+  STORAGE_SIZE_NOT_CALCULATED,
+  type configDocs,
+  type gameDoc,
+  type MaxPlayTimeDay
+} from '@appTypes/models'
 import { jaroWinkler } from '@appUtils'
 import type { Get, Paths } from 'type-fest'
 import {
@@ -16,6 +21,7 @@ import {
   getNextBusinessDayStartFromKey,
   splitTimeRangeByBusinessDay
 } from './dayBoundaryUtils'
+import { getGameLocalStore } from './gameLocalStoreFactory'
 import { useGameRegistry } from './gameRegistry'
 import { getGameStore } from './gameStoreFactory'
 import { useGameCollectionStore } from './useGameCollectionStore'
@@ -167,29 +173,51 @@ export function randomGame(currentGameId?: string): string | null {
   }
 }
 
+function getEffectiveSortName(
+  gameId: string,
+  fallback: configDocs['game']['sortNameFallback']
+): string {
+  const gameStore = getGameStore(gameId)
+  const sortName = gameStore.getState().getValue('metadata.sortName')
+  if (sortName.trim()) return sortName
+
+  const name = gameStore.getState().getValue('metadata.name')
+  let fallbackValue = ''
+
+  if (fallback === 'originalName') {
+    fallbackValue = gameStore.getState().getValue('metadata.originalName')
+  } else if (fallback === 'folderName') {
+    const rootPath = getGameLocalStore(gameId).getState().getValue('utils.rootPath')
+    fallbackValue = window.api.path.basename(rootPath)
+  }
+
+  return fallbackValue.trim() ? fallbackValue : name
+}
+
 // sorting function
 export function sortGames<Path extends Paths<gameDoc, { bracketNotation: true }>>(
   by: Path,
   order: 'asc' | 'desc' = 'asc',
-  gameIds?: string[]
+  gameIds?: readonly string[]
 ): string[] {
   if (!gameIds) gameIds = useGameRegistry.getState().gameIds
   const language = useConfigStore.getState().getConfigValue('general.language')
+  let effectiveSortNames: Map<string, string> | null = null
+
+  if (by === 'metadata.sortName') {
+    const sortNameFallback = useConfigStore.getState().getConfigValue('game.sortNameFallback')
+    effectiveSortNames = new Map(
+      gameIds.map((gameId) => [gameId, getEffectiveSortName(gameId, sortNameFallback)])
+    )
+  }
 
   return [...gameIds].sort((a, b) => {
-    const storeA = getGameStore(a)
-    const storeB = getGameStore(b)
-
-    let valueA = storeA.getState().getValue(by)
-    let valueB = storeB.getState().getValue(by)
-
-    if (by === 'metadata.sortName') {
-      const nameA = storeA.getState().getValue('metadata.name')
-      const nameB = storeB.getState().getValue('metadata.name')
-
-      valueA = (valueA as string)?.trim() ? valueA : (nameA as Get<gameDoc, Path>)
-      valueB = (valueB as string)?.trim() ? valueB : (nameB as Get<gameDoc, Path>)
-    }
+    const valueA = (
+      effectiveSortNames ? effectiveSortNames.get(a) : getGameStore(a).getState().getValue(by)
+    ) as Get<gameDoc, Path>
+    const valueB = (
+      effectiveSortNames ? effectiveSortNames.get(b) : getGameStore(b).getState().getValue(by)
+    ) as Get<gameDoc, Path>
 
     if (valueA == null && valueB == null) return 0
     if (valueA == null) return order === 'asc' ? 1 : -1

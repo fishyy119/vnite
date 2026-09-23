@@ -528,6 +528,16 @@
   },
   "metadata": {
     "title": "メタデータ",
+    "sortNameFallback": {
+      "sectionTitle": "ソート名",
+      "title": "未設定時に使用する値",
+      "description": "ゲームにソート名が設定されていない場合に、並び替えに使用する値を選択します。選択した値も未設定の場合は名前を使用します。",
+      "options": {
+        "name": "名前",
+        "originalName": "原題",
+        "folderName": "フォルダー名"
+      }
+    },
     "transformer": {
       "title": "トランスフォーマー",
       "enable": "トランスフォーマーを有効化",

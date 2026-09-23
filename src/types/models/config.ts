@@ -43,6 +43,7 @@ export interface configDocs {
     ignoreShortSessions: number
   }
   game: {
+    sortNameFallback: 'name' | 'originalName' | 'folderName'
     scraper: {
       common: {
         defaultDataSource: 'steam' | 'vndb' | 'bangumi' | 'ymgal' | 'igdb' | 'dlsite' | string
@@ -384,6 +385,7 @@ export const DEFAULT_CONFIG_VALUES: Readonly<configDocs> = {
     ignoreShortSessions: 0
   },
   game: {
+    sortNameFallback: 'name',
     scraper: {
       common: {
         defaultDataSource: 'steam',

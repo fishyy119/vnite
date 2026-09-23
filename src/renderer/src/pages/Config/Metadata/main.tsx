@@ -23,6 +23,33 @@ export function Metadata(): React.JSX.Element {
       <CardContent>
         <div className={cn('space-y-4')}>
           <div className={cn('space-y-4')}>
+            <div className={cn('border-b pb-2')}>{t('metadata.sortNameFallback.sectionTitle')}</div>
+            <div className={cn('space-y-4')}>
+              <ConfigItem
+                hookType="config"
+                path="game.sortNameFallback"
+                title={t('metadata.sortNameFallback.title')}
+                description={t('metadata.sortNameFallback.description')}
+                controlType="select"
+                options={[
+                  {
+                    value: 'name',
+                    label: t('metadata.sortNameFallback.options.name')
+                  },
+                  {
+                    value: 'originalName',
+                    label: t('metadata.sortNameFallback.options.originalName')
+                  },
+                  {
+                    value: 'folderName',
+                    label: t('metadata.sortNameFallback.options.folderName')
+                  }
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className={cn('space-y-4')}>
             <div className={cn('border-b pb-2')}>{t('metadata.transformer.title')}</div>
             <div className={cn('space-y-4')}>
               {/* Transformer Enable Switch */}

@@ -528,6 +528,16 @@
   },
   "metadata": {
     "title": "元數據",
+    "sortNameFallback": {
+      "sectionTitle": "排序名稱",
+      "title": "缺失時使用",
+      "description": "遊戲未設定排序名稱時，選擇用於排序的替代值。所選值同樣缺失時，將使用名稱。",
+      "options": {
+        "name": "名稱",
+        "originalName": "原名",
+        "folderName": "目錄名"
+      }
+    },
     "transformer": {
       "title": "轉換器",
       "enable": "啟用轉換器",

@@ -528,6 +528,16 @@
   },
   "metadata": {
     "title": "Metadata",
+    "sortNameFallback": {
+      "sectionTitle": "Sort Name",
+      "title": "Fallback Value",
+      "description": "Choose the value used for sorting when a game has no Sort Name. If the selected value is also missing, Name is used.",
+      "options": {
+        "name": "Name",
+        "originalName": "Original Name",
+        "folderName": "Folder Name"
+      }
+    },
     "transformer": {
       "title": "Transformer",
       "enable": "Enable Transformer",
