@@ -177,21 +177,20 @@ function getEffectiveSortName(
   gameId: string,
   fallback: configDocs['game']['sortNameFallback']
 ): string {
-  const gameStore = getGameStore(gameId)
-  const sortName = gameStore.getState().getValue('metadata.sortName')
+  const gameState = getGameStore(gameId).getState()
+  const sortName = gameState.getValue('metadata.sortName')
   if (sortName.trim()) return sortName
 
-  const name = gameStore.getState().getValue('metadata.name')
   let fallbackValue = ''
 
   if (fallback === 'originalName') {
-    fallbackValue = gameStore.getState().getValue('metadata.originalName')
+    fallbackValue = gameState.getValue('metadata.originalName')
   } else if (fallback === 'folderName') {
     const rootPath = getGameLocalStore(gameId).getState().getValue('utils.rootPath')
     fallbackValue = window.api.path.basename(rootPath)
   }
 
-  return fallbackValue.trim() ? fallbackValue : name
+  return fallbackValue.trim() ? fallbackValue : gameState.getValue('metadata.name')
 }
 
 // sorting function
@@ -201,46 +200,55 @@ export function sortGames<Path extends Paths<gameDoc, { bracketNotation: true }>
   gameIds?: readonly string[]
 ): string[] {
   if (!gameIds) gameIds = useGameRegistry.getState().gameIds
-  const language = useConfigStore.getState().getConfigValue('general.language')
-  let effectiveSortNames: Map<string, string> | null = null
+  let gamesWithSortValue: { gameId: string; value: Get<gameDoc, Path> }[]
+
+  // If sorting by name or sortName, get the configured language for localeCompare
+  const language =
+    by === 'metadata.name' || by === 'metadata.sortName'
+      ? useConfigStore.getState().getConfigValue('general.language')
+      : undefined
 
   if (by === 'metadata.sortName') {
     const sortNameFallback = useConfigStore.getState().getConfigValue('game.sortNameFallback')
-    effectiveSortNames = new Map(
-      gameIds.map((gameId) => [gameId, getEffectiveSortName(gameId, sortNameFallback)])
-    )
+    gamesWithSortValue = gameIds.map((gameId) => ({
+      gameId,
+      value: getEffectiveSortName(gameId, sortNameFallback) as Get<gameDoc, Path>
+    }))
+  } else {
+    gamesWithSortValue = gameIds.map((gameId) => ({
+      gameId,
+      value: getGameStore(gameId).getState().getValue(by)
+    }))
   }
 
-  return [...gameIds].sort((a, b) => {
-    const valueA = (
-      effectiveSortNames ? effectiveSortNames.get(a) : getGameStore(a).getState().getValue(by)
-    ) as Get<gameDoc, Path>
-    const valueB = (
-      effectiveSortNames ? effectiveSortNames.get(b) : getGameStore(b).getState().getValue(by)
-    ) as Get<gameDoc, Path>
+  return gamesWithSortValue
+    .sort((a, b) => {
+      const valueA = a.value
+      const valueB = b.value
 
-    if (valueA == null && valueB == null) return 0
-    if (valueA == null) return order === 'asc' ? 1 : -1
-    if (valueB == null) return order === 'asc' ? -1 : 1
-    if (valueA === valueB) return 0
+      if (valueA == null && valueB == null) return 0
+      if (valueA == null) return order === 'asc' ? 1 : -1
+      if (valueB == null) return order === 'asc' ? -1 : 1
+      if (valueA === valueB) return 0
 
-    if (typeof valueA === 'string' && typeof valueB === 'string') {
-      if (by === 'metadata.name' || by === 'metadata.sortName') {
-        return order === 'asc'
-          ? valueA.localeCompare(valueB, language || undefined)
-          : valueB.localeCompare(valueA, language || undefined)
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        if (by === 'metadata.name' || by === 'metadata.sortName') {
+          return order === 'asc'
+            ? valueA.localeCompare(valueB, language || undefined)
+            : valueB.localeCompare(valueA, language || undefined)
+        } else {
+          return order === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA)
+        }
+      } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return order === 'asc' ? valueA - valueB : valueB - valueA
       } else {
-        return order === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA)
+        // If the type is not clear, try to convert to a string for comparison
+        const strA = String(valueA)
+        const strB = String(valueB)
+        return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA)
       }
-    } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-      return order === 'asc' ? valueA - valueB : valueB - valueA
-    } else {
-      // If the type is not clear, try to convert to a string for comparison
-      const strA = String(valueA)
-      const strB = String(valueB)
-      return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA)
-    }
-  })
+    })
+    .map(({ gameId }) => gameId)
 }
 
 export function getRecentGameIds(count = 5, gameIds?: string[]): string[] {
