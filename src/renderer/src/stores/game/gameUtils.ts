@@ -2,10 +2,11 @@ import {
   STORAGE_SIZE_NOT_CALCULATED,
   type configDocs,
   type gameDoc,
+  type GameSortField,
   type MaxPlayTimeDay
 } from '@appTypes/models'
 import { jaroWinkler } from '@appUtils'
-import type { Get, Paths } from 'type-fest'
+import type { Paths } from 'type-fest'
 import {
   capDailyPlayTime,
   getDailyPlayTimesInRange,
@@ -23,7 +24,7 @@ import {
 } from './dayBoundaryUtils'
 import { getGameLocalStore } from './gameLocalStoreFactory'
 import { useGameRegistry } from './gameRegistry'
-import { getGameStore } from './gameStoreFactory'
+import { getGameStore, type SingleGameState } from './gameStoreFactory'
 import { useGameCollectionStore } from './useGameCollectionStore'
 
 export interface GameRecordCalculationSource {
@@ -175,9 +176,9 @@ export function randomGame(currentGameId?: string): string | null {
 
 function getEffectiveSortName(
   gameId: string,
-  fallback: configDocs['game']['sortNameFallback']
+  fallback: configDocs['game']['sortNameFallback'],
+  gameState: SingleGameState
 ): string {
-  const gameState = getGameStore(gameId).getState()
   const sortName = gameState.getValue('metadata.sortName')
   if (sortName.trim()) return sortName
 
@@ -193,74 +194,110 @@ function getEffectiveSortName(
   return fallbackValue.trim() ? fallbackValue : gameState.getValue('metadata.name')
 }
 
+type GameSortValue = string | number | null | undefined
+
+function compareGameSortValues(
+  valueA: GameSortValue,
+  valueB: GameSortValue,
+  by: GameSortField,
+  order: 'asc' | 'desc',
+  language?: string
+): number {
+  if (valueA == null && valueB == null) return 0
+  if (valueA == null) return order === 'asc' ? 1 : -1
+  if (valueB == null) return order === 'asc' ? -1 : 1
+  if (valueA === valueB) return 0
+
+  let comparison: number
+
+  if (typeof valueA === 'number' && typeof valueB === 'number') {
+    comparison = valueA - valueB
+  } else {
+    const compareLanguage =
+      by === 'metadata.name' || by === 'metadata.sortName' ? language || undefined : undefined
+    comparison = String(valueA).localeCompare(String(valueB), compareLanguage)
+  }
+
+  return order === 'asc' ? comparison : -comparison
+}
+
 // sorting function
-export function sortGames<Path extends Paths<gameDoc, { bracketNotation: true }>>(
-  by: Path,
-  order: 'asc' | 'desc' = 'asc',
+export function sortGames(
+  sort: configDocs['game']['gameList']['sort'],
   gameIds?: readonly string[]
 ): string[] {
   if (!gameIds) gameIds = useGameRegistry.getState().gameIds
-  let gamesWithSortValue: { gameId: string; value: Get<gameDoc, Path> | number }[]
+  const secondary = sort.secondary?.by === sort.by ? null : sort.secondary
+  const fields = [sort.by, secondary?.by]
 
   // If sorting by name or sortName, get the configured language for localeCompare
-  const language =
-    by === 'metadata.name' || by === 'metadata.sortName'
-      ? useConfigStore.getState().getConfigValue('general.language')
-      : undefined
+  const language = fields.some(
+    (field) => field === 'metadata.name' || field === 'metadata.sortName'
+  )
+    ? useConfigStore.getState().getConfigValue('general.language')
+    : undefined
 
-  if (by === 'metadata.sortName') {
-    const sortNameFallback = useConfigStore.getState().getConfigValue('game.sortNameFallback')
-    gamesWithSortValue = gameIds.map((gameId) => ({
-      gameId,
-      value: getEffectiveSortName(gameId, sortNameFallback) as Get<gameDoc, Path>
-    }))
-  } else if (by === 'record.playStatus') {
+  const sortNameFallback = fields.includes('metadata.sortName')
+    ? useConfigStore.getState().getConfigValue('game.sortNameFallback')
+    : undefined
+
+  // If sorting by playStatus, get the configured playStatusSortOrder for ranking
+  let playStatusRank: Record<string, number> | undefined
+  let playStatusFallbackRank = 0
+  if (fields.includes('record.playStatus')) {
     const playStatusSortOrder = useConfigStore.getState().getConfigValue('game.playStatusSortOrder')
-    const playStatusRank: Record<string, number> = {}
+    const rank: Record<string, number> = {}
     playStatusSortOrder.forEach((status, index) => {
-      playStatusRank[status] = index
+      rank[status] = index
     })
-
-    gamesWithSortValue = gameIds.map((gameId) => {
-      const playStatus = getGameStore(gameId).getState().getValue('record.playStatus')
-      return {
-        gameId,
-        value: playStatusRank[playStatus] ?? playStatusSortOrder.length
-      }
-    })
-  } else {
-    gamesWithSortValue = gameIds.map((gameId) => ({
-      gameId,
-      value: getGameStore(gameId).getState().getValue(by)
-    }))
+    playStatusRank = rank
+    playStatusFallbackRank = playStatusSortOrder.length
   }
 
-  return gamesWithSortValue
-    .sort((a, b) => {
-      const valueA = a.value
-      const valueB = b.value
+  const getSortValue = (
+    gameId: string,
+    gameState: SingleGameState,
+    by: GameSortField
+  ): GameSortValue => {
+    if (by === 'metadata.sortName') {
+      return getEffectiveSortName(gameId, sortNameFallback ?? 'name', gameState)
+    }
 
-      if (valueA == null && valueB == null) return 0
-      if (valueA == null) return order === 'asc' ? 1 : -1
-      if (valueB == null) return order === 'asc' ? -1 : 1
-      if (valueA === valueB) return 0
+    if (by === 'record.playStatus') {
+      const playStatus = gameState.getValue('record.playStatus')
+      return playStatusRank?.[playStatus] ?? playStatusFallbackRank
+    }
 
-      if (typeof valueA === 'string' && typeof valueB === 'string') {
-        if (by === 'metadata.name' || by === 'metadata.sortName') {
-          return order === 'asc'
-            ? valueA.localeCompare(valueB, language || undefined)
-            : valueB.localeCompare(valueA, language || undefined)
-        } else {
-          return order === 'asc' ? valueA.localeCompare(valueB) : valueB.localeCompare(valueA)
-        }
-      } else if (typeof valueA === 'number' && typeof valueB === 'number') {
-        return order === 'asc' ? valueA - valueB : valueB - valueA
-      } else {
-        // If the type is not clear, try to convert to a string for comparison
-        const strA = String(valueA)
-        const strB = String(valueB)
-        return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA)
+    return gameState.getValue(by)
+  }
+
+  return gameIds
+    .map((gameId) => {
+      const gameState = getGameStore(gameId).getState()
+      return {
+        gameId,
+        value: getSortValue(gameId, gameState, sort.by),
+        secondaryValue: secondary ? getSortValue(gameId, gameState, secondary.by) : undefined
       }
+    })
+    .sort((a, b) => {
+      const primaryComparison = compareGameSortValues(
+        a.value,
+        b.value,
+        sort.by,
+        sort.order,
+        language
+      )
+      if (primaryComparison !== 0) return primaryComparison
+      if (!secondary) return 0
+
+      return compareGameSortValues(
+        a.secondaryValue,
+        b.secondaryValue,
+        secondary.by,
+        secondary.order,
+        language
+      )
     })
     .map(({ gameId }) => gameId)
 }
@@ -276,7 +313,10 @@ export function getRecentGameIds(count = 5, gameIds?: string[]): string[] {
     return Boolean(lastRunDate) && hideFromRecentGames !== true
   })
 
-  return sortGames('record.lastRunDate', 'desc', visibleRecentGameIds).slice(0, count)
+  return sortGames(
+    { by: 'record.lastRunDate', order: 'desc', secondary: null },
+    visibleRecentGameIds
+  ).slice(0, count)
 }
 
 type FilterMatchMode = 'contains' | 'exact'

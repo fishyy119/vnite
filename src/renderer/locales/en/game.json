@@ -17,6 +17,10 @@
       "playStatus": "Play Status"
     }
   },
+  "sortingControls": {
+    "secondary": "Secondary Sort",
+    "none": "None"
+  },
   "list": {
     "search": {
       "results": "Search Results"
@@ -37,19 +41,7 @@
       "noResults": "No games found matching your criteria"
     },
     "all": {
-      "title": "All Games",
-      "sortBy": "Sort by",
-      "sortOptions": {
-        "name": "Name",
-        "sortName": "Sort Name",
-        "releaseDate": "Release Date",
-        "lastRunDate": "Last Played Date",
-        "addDate": "Date Added",
-        "playTime": "Play Time",
-        "score": "Score",
-        "storageSize": "Game Size",
-        "playStatus": "Play Status"
-      }
+      "title": "All Games"
     },
     "playStatus": {
       "adjustOrder": "Adjust Order"

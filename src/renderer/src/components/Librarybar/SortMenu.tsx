@@ -1,18 +1,18 @@
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+
 import { Button } from '@ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select'
 import { Separator } from '@ui/separator'
 import { Switch } from '@ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip'
-import React from 'react'
-import { useTranslation } from 'react-i18next'
+import {
+  GameSortFieldSelect,
+  SecondarySortFields,
+  SortDirectionButton
+} from '~/components/Game/GameSortControl'
+import { GAME_SORT_FIELDS } from '~/components/Game/gameSortOptions'
 import { PlayStatusOrderEditor } from '~/components/Game/PlayStatusOrderEditor'
 import { useConfigState } from '~/hooks'
 import { cn } from '~/utils'
@@ -29,16 +29,11 @@ export function SortMenu({
 }): React.JSX.Element {
   const { t } = useTranslation('game')
   const [selectedGroup, setSelectedGroup] = useConfigState('game.gameList.selectedGroup')
-  const [by, setBy] = useConfigState('game.gameList.sort.by')
-  const [order, setOrder] = useConfigState('game.gameList.sort.order')
+  const [sort, setSort] = useConfigState('game.gameList.sort')
   const setOpenValues = useGameListStore((s) => s.setOpenValues)
   const [overrideCollectionSort, setOverrideCollectionSort] = useConfigState(
     'game.gameList.overrideCollectionSort'
   )
-
-  const toggleOrder = (): void => {
-    setOrder(order === 'asc' ? 'desc' : 'asc')
-  }
 
   const { playStatusOrder, setPlayStatusOrder } = usePlayStatusOrderStore()
 
@@ -53,53 +48,42 @@ export function SortMenu({
       <PopoverContent side="bottom">
         <div className={cn('flex flex-col gap-5')}>
           {/* Sort By Select */}
-          <div className={cn('flex flex-row gap-1 items-center justify-center')}>
-            <div className={cn('text-sm whitespace-nowrap')}>{t('list.all.sortBy')}：</div>
-            <Select value={by} onValueChange={setBy} defaultValue="name">
-              <SelectTrigger className={cn('flex-grow h-[26px] text-xs min-h-0')}>
-                <SelectValue placeholder="Select a fruit" className={cn('text-xs')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="metadata.name">{t('list.all.sortOptions.name')}</SelectItem>
-                  <SelectItem value="metadata.sortName">
-                    {t('list.all.sortOptions.sortName')}
-                  </SelectItem>
-                  <SelectItem value="metadata.releaseDate">
-                    {t('list.all.sortOptions.releaseDate')}
-                  </SelectItem>
-                  <SelectItem value="record.lastRunDate">
-                    {t('list.all.sortOptions.lastRunDate')}
-                  </SelectItem>
-                  <SelectItem value="record.addDate">
-                    {t('list.all.sortOptions.addDate')}
-                  </SelectItem>
-                  <SelectItem value="record.playTime">
-                    {t('list.all.sortOptions.playTime')}
-                  </SelectItem>
-                  <SelectItem value="record.score">{t('list.all.sortOptions.score')}</SelectItem>
-                  <SelectItem value="record.storageSize">
-                    {t('list.all.sortOptions.storageSize')}
-                  </SelectItem>
-                  <SelectItem value="record.playStatus">
-                    {t('list.all.sortOptions.playStatus')}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+          <div
+            className={cn('grid grid-cols-[auto_minmax(0,1fr)_26px] gap-x-1 gap-y-5 items-center')}
+          >
+            <div className={cn('text-sm whitespace-nowrap')}>{t('showcase.sorting.label')}：</div>
+            <GameSortFieldSelect
+              value={sort.by}
+              fields={GAME_SORT_FIELDS}
+              triggerClassName={cn('w-full h-[26px] text-xs min-h-0')}
+              onValueChange={(by) => {
+                void setSort({
+                  ...sort,
+                  by,
+                  secondary: sort.secondary?.by === by ? null : sort.secondary
+                })
+              }}
+            />
             {/* Toggle Order Button */}
-            <Button
-              variant={'thirdary'}
-              size={'icon'}
-              className={cn('h-[26px] w-[26px] ml-1')}
-              onClick={toggleOrder}
-            >
-              {order === 'asc' ? (
-                <span className={cn('icon-[mdi--arrow-up] w-4 h-4')}></span>
-              ) : (
-                <span className={cn('icon-[mdi--arrow-down] w-4 h-4')}></span>
-              )}
-            </Button>
+            <SortDirectionButton
+              order={sort.order}
+              className={cn('h-[26px] w-[26px]')}
+              onOrderChange={(order) => {
+                void setSort({ ...sort, order })
+              }}
+            />
+            <div className={cn('text-sm whitespace-nowrap')}>
+              {t('sortingControls.secondary')}：
+            </div>
+            <SecondarySortFields
+              primaryBy={sort.by}
+              value={sort.secondary}
+              fields={GAME_SORT_FIELDS}
+              layout="inline"
+              onValueChange={(secondary) => {
+                void setSort({ ...sort, secondary })
+              }}
+            />
           </div>
 
           {/* Group by select */}

@@ -17,6 +17,10 @@
       "playStatus": "遊玩狀態"
     }
   },
+  "sortingControls": {
+    "secondary": "二級排序",
+    "none": "無"
+  },
   "list": {
     "search": {
       "results": "搜尋結果"
@@ -37,19 +41,7 @@
       "noResults": "沒有找到符合條件的遊戲"
     },
     "all": {
-      "title": "所有遊戲",
-      "sortBy": "排序依據",
-      "sortOptions": {
-        "name": "名稱",
-        "sortName": "排序名稱",
-        "releaseDate": "發布日期",
-        "lastRunDate": "最後執行日期",
-        "addDate": "添加日期",
-        "playTime": "遊玩時間",
-        "score": "評分",
-        "storageSize": "遊戲大小",
-        "playStatus": "遊玩狀態"
-      }
+      "title": "所有遊戲"
     },
     "playStatus": {
       "adjustOrder": "調整順序"

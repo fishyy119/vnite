@@ -17,6 +17,10 @@
       "playStatus": "プレイ状況"
     }
   },
+  "sortingControls": {
+    "secondary": "第2ソート",
+    "none": "なし"
+  },
   "list": {
     "search": {
       "results": "検索結果"
@@ -37,19 +41,7 @@
       "noResults": "条件に一致するゲームが見つかりません"
     },
     "all": {
-      "title": "すべてのゲーム",
-      "sortBy": "並び順",
-      "sortOptions": {
-        "name": "名前",
-        "sortName": "ソート名",
-        "releaseDate": "リリース日",
-        "lastRunDate": "最終プレイ日",
-        "addDate": "追加日",
-        "playTime": "プレイ時間",
-        "score": "スコア",
-        "storageSize": "ゲームサイズ",
-        "playStatus": "プレイ状態"
-      }
+      "title": "すべてのゲーム"
     },
     "playStatus": {
       "adjustOrder": "順序を調整"

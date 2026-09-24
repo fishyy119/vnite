@@ -1,7 +1,7 @@
-import type { LauncherPreset } from './launcherPreset'
-import { DEFAULT_PLAY_STATUS_ORDER, type gameDoc } from './game'
-import { DEFAULT_LOCAL_UPSCALER_CONFIG, type LocalUpscalerConfig } from '../utils/upscaler'
 import { defaultReportExportOptions, type ReportExportOptions } from '../report'
+import { DEFAULT_LOCAL_UPSCALER_CONFIG, type LocalUpscalerConfig } from '../utils/upscaler'
+import { DEFAULT_PLAY_STATUS_ORDER, type gameDoc, type GameSortField } from './game'
+import type { LauncherPreset } from './launcherPreset'
 
 export enum NSFWBlurLevel {
   Off = 0,
@@ -61,32 +61,22 @@ export interface configDocs {
     }
     showcase: {
       sort: {
-        by:
-          | 'metadata.name'
-          | 'metadata.sortName'
-          | 'metadata.releaseDate'
-          | 'record.lastRunDate'
-          | 'record.addDate'
-          | 'record.playTime'
-          | 'record.score'
-          | 'record.storageSize'
-          | 'record.playStatus'
+        by: GameSortField
         order: 'asc' | 'desc'
+        secondary: {
+          by: GameSortField
+          order: 'asc' | 'desc'
+        } | null
       }
     }
     gameList: {
       sort: {
-        by:
-          | 'metadata.name'
-          | 'metadata.sortName'
-          | 'metadata.releaseDate'
-          | 'record.lastRunDate'
-          | 'record.addDate'
-          | 'record.playTime'
-          | 'record.score'
-          | 'record.storageSize'
-          | 'record.playStatus'
+        by: GameSortField
         order: 'asc' | 'desc'
+        secondary: {
+          by: GameSortField
+          order: 'asc' | 'desc'
+        } | null
       }
       groupSortSummary: {
         by: 'none' | 'record.playTime' | 'record.score' | 'record.storageSize'
@@ -406,13 +396,15 @@ export const DEFAULT_CONFIG_VALUES: Readonly<configDocs> = {
     showcase: {
       sort: {
         by: 'metadata.name',
-        order: 'desc' as const
+        order: 'desc' as const,
+        secondary: null
       }
     },
     gameList: {
       sort: {
         by: 'metadata.name',
-        order: 'desc' as const
+        order: 'desc' as const,
+        secondary: null
       },
       groupSortSummary: {
         by: 'none',
