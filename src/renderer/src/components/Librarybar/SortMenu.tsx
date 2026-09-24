@@ -15,6 +15,8 @@ import {
 } from '~/components/Game/GameSortControl'
 import { PlayStatusOrderEditor } from '~/components/Game/PlayStatusOrderEditor'
 import { useConfigState } from '~/hooks'
+import { useGameCollectionStore } from '~/stores'
+import { filterGames, getAllValuesInKey, useVisibleGameIds } from '~/stores/game'
 import { cn } from '~/utils'
 import { useGameListStore, usePlayStatusOrderStore } from './store'
 
@@ -34,8 +36,46 @@ export function SortMenu({
   const [overrideCollectionSort, setOverrideCollectionSort] = useConfigState(
     'game.gameList.overrideCollectionSort'
   )
+  const visibleGameIds = useVisibleGameIds()
+  const collections = useGameCollectionStore((s) => s.documents)
 
   const { playStatusOrder, setPlayStatusOrder } = usePlayStatusOrderStore()
+
+  const expandAllGroups = (): void => {
+    let values: string[] = []
+
+    if (selectedGroup === 'collection') {
+      const visibleGameIdSet = new Set(visibleGameIds)
+      const collectedGameIds = new Set<string>()
+      values = Object.entries(collections)
+        .filter(([, collection]) =>
+          collection.games.some((gameId) => {
+            if (!visibleGameIdSet.has(gameId)) return false
+            collectedGameIds.add(gameId)
+            return true
+          })
+        )
+        .map(([collectionId]) => collectionId)
+
+      if (visibleGameIds.some((gameId) => !collectedGameIds.has(gameId))) {
+        values.push('__empty__')
+      }
+    } else if (selectedGroup === 'record.playStatus') {
+      values = getAllValuesInKey('record.playStatus', visibleGameIds)
+    } else if (selectedGroup === 'metadata.developers' || selectedGroup === 'metadata.genres') {
+      const groupField = selectedGroup
+      values = getAllValuesInKey(groupField, visibleGameIds)
+      if (filterGames({ [groupField]: ['__empty__'] }, visibleGameIds).length > 0) {
+        values.push('__empty__')
+      }
+    }
+
+    // Exclude "Recent Games" and "All Games" from "Expand All".
+    // The action is intended for browsing regular groups, meanwhile:
+    // - "Recent Games" is already easily accessible at the top
+    // - "All Games" mostly duplicates content from the individual groups.
+    setOpenValues(selectedGroup, values)
+  }
 
   return (
     <Popover open={isSortMenuOpen} onOpenChange={setIsSortMenuOpen}>
@@ -105,19 +145,26 @@ export function SortMenu({
                 </SelectItem>
               </SelectContent>
             </Select>
-            {/* Quickly collapse Button */}
+            {/* Quickly collapse/expand groups Button */}
             <Tooltip>
               <TooltipTrigger>
                 <Button
                   variant={'thirdary'}
                   size={'icon'}
                   className={cn('h-[26px] w-[26px] ml-1')}
+                  aria-label={t('librarybar.groupExpandCollapse')}
                   onClick={() => setOpenValues(selectedGroup, [])}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    expandAllGroups()
+                  }}
                 >
-                  <span className={cn('icon-[mdi--collapse-all-outline] w-4 h-4')}></span>
+                  <span className={cn('icon-[mdi--animation-outline] w-4 h-4')}></span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">{t('librarybar.collapseAllGroups')}</TooltipContent>
+              <TooltipContent side="bottom" className="whitespace-pre-line text-center">
+                {t('librarybar.groupExpandCollapse')}
+              </TooltipContent>
             </Tooltip>
           </div>
 
