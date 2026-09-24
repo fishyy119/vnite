@@ -214,7 +214,9 @@ function compareGameSortValues(
     comparison = valueA - valueB
   } else {
     const compareLanguage =
-      by === 'metadata.name' || by === 'metadata.sortName' ? language || undefined : undefined
+      by === 'metadata.name' || by === 'metadata.sortName' || by === 'metadata.developers'
+        ? language || undefined
+        : undefined
     comparison = String(valueA).localeCompare(String(valueB), compareLanguage)
   }
 
@@ -230,9 +232,10 @@ export function sortGames(
   const secondary = sort.secondary?.by === sort.by ? null : sort.secondary
   const fields = [sort.by, secondary?.by]
 
-  // If sorting by name or sortName, get the configured language for localeCompare
+  // If sorting by a localized text field, get the configured language for localeCompare
   const language = fields.some(
-    (field) => field === 'metadata.name' || field === 'metadata.sortName'
+    (field) =>
+      field === 'metadata.name' || field === 'metadata.sortName' || field === 'metadata.developers'
   )
     ? useConfigStore.getState().getConfigValue('general.language')
     : undefined
@@ -266,6 +269,10 @@ export function sortGames(
     if (by === 'record.playStatus') {
       const playStatus = gameState.getValue('record.playStatus')
       return playStatusRank?.[playStatus] ?? playStatusFallbackRank
+    }
+
+    if (by === 'metadata.developers') {
+      return gameState.getValue('metadata.developers')[0]
     }
 
     return gameState.getValue(by)

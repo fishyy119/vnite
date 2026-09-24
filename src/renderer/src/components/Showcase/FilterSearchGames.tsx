@@ -1,3 +1,4 @@
+import { GAME_SORT_FIELDS } from '@appTypes/models'
 import { ScrollArea } from '@ui/scroll-area'
 import { SeparatorDashed } from '@ui/separator-dashed'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +8,6 @@ import {
   SecondarySortControl,
   SortDirectionButton
 } from '~/components/Game/GameSortControl'
-import { GAME_SORT_FIELDS } from '~/components/Game/gameSortOptions'
 import { useConfigState } from '~/hooks'
 import { filterGames, searchGames, sortGames } from '~/stores/game'
 import { cn } from '~/utils'

@@ -1,3 +1,4 @@
+import { GAME_SORT_FIELDS } from '@appTypes/models'
 import { observeElementOffset, useVirtualizer, type Virtualizer } from '@tanstack/react-virtual'
 import { SeparatorDashed } from '@ui/separator-dashed'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -11,7 +12,6 @@ import {
   SecondarySortControl,
   SortDirectionButton
 } from '~/components/Game/GameSortControl'
-import { GAME_SORT_FIELDS } from '~/components/Game/gameSortOptions'
 import { InformationDialog } from '~/components/Game/Overview/Information/InformationDialog'
 import { CalculateStorageSizeDialog } from '~/components/Game/Overview/Record/CalculateStorageSizeDialog'
 import { BatchGameNavCM } from '~/components/GameBatchEditor/BatchGameNavCM'

@@ -93,6 +93,7 @@
       "options": {
         "name": "名前",
         "sortName": "ソート名",
+        "developers": "開発元",
         "releaseDate": "リリース日",
         "lastRunDate": "最終プレイ日",
         "addDate": "追加日",

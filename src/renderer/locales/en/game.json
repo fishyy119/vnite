@@ -93,6 +93,7 @@
       "options": {
         "name": "Name",
         "sortName": "Sort Name",
+        "developers": "Developer",
         "releaseDate": "Release Date",
         "lastRunDate": "Last Played Date",
         "addDate": "Date Added",

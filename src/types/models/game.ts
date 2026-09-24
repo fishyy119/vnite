@@ -7,6 +7,7 @@ export type GameMemoryViewMode = 'grid' | 'full' | 'masonry' | 'list'
 export type GameSortField =
   | 'metadata.name'
   | 'metadata.sortName'
+  | 'metadata.developers'
   | 'metadata.releaseDate'
   | 'record.lastRunDate'
   | 'record.addDate'
@@ -14,6 +15,19 @@ export type GameSortField =
   | 'record.score'
   | 'record.storageSize'
   | 'record.playStatus'
+
+export const GAME_SORT_FIELDS: readonly GameSortField[] = [
+  'metadata.name',
+  'metadata.sortName',
+  'metadata.developers',
+  'metadata.releaseDate',
+  'record.lastRunDate',
+  'record.addDate',
+  'record.playTime',
+  'record.score',
+  'record.storageSize',
+  'record.playStatus'
+]
 
 export type gameDocs = {
   [gameId: string]: gameDoc

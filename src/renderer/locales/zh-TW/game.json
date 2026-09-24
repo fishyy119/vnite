@@ -93,6 +93,7 @@
       "options": {
         "name": "名稱",
         "sortName": "排序名稱",
+        "developers": "開發商",
         "releaseDate": "發布日期",
         "lastRunDate": "最後執行日期",
         "addDate": "添加日期",

@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { GAME_SORT_FIELDS } from '@appTypes/models'
 import { Button } from '@ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select'
@@ -12,7 +13,6 @@ import {
   SecondarySortFields,
   SortDirectionButton
 } from '~/components/Game/GameSortControl'
-import { GAME_SORT_FIELDS } from '~/components/Game/gameSortOptions'
 import { PlayStatusOrderEditor } from '~/components/Game/PlayStatusOrderEditor'
 import { useConfigState } from '~/hooks'
 import { cn } from '~/utils'

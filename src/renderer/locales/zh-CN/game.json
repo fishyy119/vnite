@@ -93,6 +93,7 @@
       "options": {
         "name": "名称",
         "sortName": "排序名称",
+        "developers": "开发商",
         "releaseDate": "发布日期",
         "lastRunDate": "最后运行日期",
         "addDate": "添加日期",

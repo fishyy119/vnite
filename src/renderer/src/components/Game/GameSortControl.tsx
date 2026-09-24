@@ -16,6 +16,7 @@ import { cn } from '~/utils'
 const SORT_FIELD_TRANSLATION_KEYS: Record<GameSortField | 'custom', string> = {
   'metadata.name': 'name',
   'metadata.sortName': 'sortName',
+  'metadata.developers': 'developers',
   'metadata.releaseDate': 'releaseDate',
   'record.lastRunDate': 'lastRunDate',
   'record.addDate': 'addDate',
