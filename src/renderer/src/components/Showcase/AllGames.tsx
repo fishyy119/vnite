@@ -243,6 +243,9 @@ export function AllGames(): React.JSX.Element {
                   <SelectItem value="record.storageSize">
                     {t('showcase.sorting.options.storageSize')}
                   </SelectItem>
+                  <SelectItem value="record.playStatus">
+                    {t('showcase.sorting.options.playStatus')}
+                  </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>

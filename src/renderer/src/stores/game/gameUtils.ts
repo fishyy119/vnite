@@ -200,7 +200,7 @@ export function sortGames<Path extends Paths<gameDoc, { bracketNotation: true }>
   gameIds?: readonly string[]
 ): string[] {
   if (!gameIds) gameIds = useGameRegistry.getState().gameIds
-  let gamesWithSortValue: { gameId: string; value: Get<gameDoc, Path> }[]
+  let gamesWithSortValue: { gameId: string; value: Get<gameDoc, Path> | number }[]
 
   // If sorting by name or sortName, get the configured language for localeCompare
   const language =
@@ -214,6 +214,20 @@ export function sortGames<Path extends Paths<gameDoc, { bracketNotation: true }>
       gameId,
       value: getEffectiveSortName(gameId, sortNameFallback) as Get<gameDoc, Path>
     }))
+  } else if (by === 'record.playStatus') {
+    const playStatusSortOrder = useConfigStore.getState().getConfigValue('game.playStatusSortOrder')
+    const playStatusRank: Record<string, number> = {}
+    playStatusSortOrder.forEach((status, index) => {
+      playStatusRank[status] = index
+    })
+
+    gamesWithSortValue = gameIds.map((gameId) => {
+      const playStatus = getGameStore(gameId).getState().getValue('record.playStatus')
+      return {
+        gameId,
+        value: playStatusRank[playStatus] ?? playStatusSortOrder.length
+      }
+    })
   } else {
     gamesWithSortValue = gameIds.map((gameId) => ({
       gameId,

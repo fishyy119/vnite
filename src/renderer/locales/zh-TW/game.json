@@ -47,7 +47,8 @@
         "addDate": "添加日期",
         "playTime": "遊玩時間",
         "score": "評分",
-        "storageSize": "遊戲大小"
+        "storageSize": "遊戲大小",
+        "playStatus": "遊玩狀態"
       }
     },
     "playStatus": {
@@ -106,7 +107,8 @@
         "playTime": "遊玩時間",
         "score": "評分",
         "custom": "自訂順序",
-        "storageSize": "遊戲大小"
+        "storageSize": "遊戲大小",
+        "playStatus": "遊玩狀態"
       }
     },
     "gameCard": {

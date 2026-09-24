@@ -105,6 +105,7 @@ export interface gameCollectionDoc {
     | 'record.addDate'
     | 'record.playTime'
     | 'record.storageSize'
+    | 'record.playStatus'
     | 'custom'
   sortOrder: 'asc' | 'desc'
   games: string[]

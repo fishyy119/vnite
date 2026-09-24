@@ -1,4 +1,5 @@
 import type { LauncherPreset } from './launcherPreset'
+import { DEFAULT_PLAY_STATUS_ORDER, type gameDoc } from './game'
 import { DEFAULT_LOCAL_UPSCALER_CONFIG, type LocalUpscalerConfig } from '../utils/upscaler'
 import { defaultReportExportOptions, type ReportExportOptions } from '../report'
 
@@ -44,6 +45,7 @@ export interface configDocs {
   }
   game: {
     sortNameFallback: 'name' | 'originalName' | 'folderName'
+    playStatusSortOrder: gameDoc['record']['playStatus'][]
     scraper: {
       common: {
         defaultDataSource: 'steam' | 'vndb' | 'bangumi' | 'ymgal' | 'igdb' | 'dlsite' | string
@@ -68,6 +70,7 @@ export interface configDocs {
           | 'record.playTime'
           | 'record.score'
           | 'record.storageSize'
+          | 'record.playStatus'
         order: 'asc' | 'desc'
       }
     }
@@ -82,6 +85,7 @@ export interface configDocs {
           | 'record.playTime'
           | 'record.score'
           | 'record.storageSize'
+          | 'record.playStatus'
         order: 'asc' | 'desc'
       }
       groupSortSummary: {
@@ -377,7 +381,6 @@ export const DEFAULT_CONFIG_VALUES: Readonly<configDocs> = {
     quitToTray: false,
     language: '',
     hideWindowAfterGameStart: true,
-    // 默认延续现有版本的退出行为，升级后仍会显示并聚焦主窗口，用户可在设置中关闭。
     showWindowAfterGameExit: true,
     enableForegroundTimer: true,
     foregroundWaitTime: 10,
@@ -386,6 +389,7 @@ export const DEFAULT_CONFIG_VALUES: Readonly<configDocs> = {
   },
   game: {
     sortNameFallback: 'name',
+    playStatusSortOrder: [...DEFAULT_PLAY_STATUS_ORDER],
     scraper: {
       common: {
         defaultDataSource: 'steam',

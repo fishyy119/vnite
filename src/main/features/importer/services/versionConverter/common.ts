@@ -582,6 +582,7 @@ async function convertConfig(basePath: string): Promise<void> {
     // Converting game-related configurations
     await ConfigDBManager.setConfigValue('game', {
       sortNameFallback: DEFAULT_CONFIG_VALUES.game.sortNameFallback,
+      playStatusSortOrder: DEFAULT_CONFIG_VALUES.game.playStatusSortOrder,
       scraper: {
         common: {
           defaultDataSource: mapDataSourceName(v2Config.scraper.defaultDataSource),

@@ -47,7 +47,8 @@
         "addDate": "追加日",
         "playTime": "プレイ時間",
         "score": "スコア",
-        "storageSize": "ゲームサイズ"
+        "storageSize": "ゲームサイズ",
+        "playStatus": "プレイ状態"
       }
     },
     "playStatus": {
@@ -106,7 +107,8 @@
         "playTime": "プレイ時間",
         "score": "スコア",
         "custom": "カスタム順序",
-        "storageSize": "ゲームサイズ"
+        "storageSize": "ゲームサイズ",
+        "playStatus": "プレイ状態"
       }
     },
     "gameCard": {

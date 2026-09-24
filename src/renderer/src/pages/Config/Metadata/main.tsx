@@ -1,15 +1,19 @@
-import { cn } from '~/utils'
+import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
-import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { ConfigItem } from '~/components/form/ConfigItem'
 import { ConfigItemPure } from '~/components/form/ConfigItemPure'
-import { useNavigate } from '@tanstack/react-router'
+import { PlayStatusOrderEditor } from '~/components/Game/PlayStatusOrderEditor'
 import { Button } from '~/components/ui/button'
-import { useTranslation } from 'react-i18next'
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { useConfigState } from '~/hooks'
+import { cn } from '~/utils'
 
 export function Metadata(): React.JSX.Element {
   const { t } = useTranslation('config')
   const navigate = useNavigate()
+  const [playStatusSortOrder, setPlayStatusSortOrder] = useConfigState('game.playStatusSortOrder')
 
   return (
     <Card className={cn('group')}>
@@ -23,7 +27,7 @@ export function Metadata(): React.JSX.Element {
       <CardContent>
         <div className={cn('space-y-4')}>
           <div className={cn('space-y-4')}>
-            <div className={cn('border-b pb-2')}>{t('metadata.sortNameFallback.sectionTitle')}</div>
+            <div className={cn('border-b pb-2')}>{t('metadata.sorting.sectionTitle')}</div>
             <div className={cn('space-y-4')}>
               <ConfigItem
                 hookType="config"
@@ -46,6 +50,25 @@ export function Metadata(): React.JSX.Element {
                   }
                 ]}
               />
+
+              <ConfigItemPure
+                title={t('metadata.playStatusSortOrder.title')}
+                description={t('metadata.playStatusSortOrder.description')}
+              >
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline">{t('metadata.playStatusSortOrder.button')}</Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end">
+                    <PlayStatusOrderEditor
+                      order={playStatusSortOrder}
+                      onOrderChange={(newOrder) => {
+                        void setPlayStatusSortOrder(newOrder)
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </ConfigItemPure>
             </div>
           </div>
 

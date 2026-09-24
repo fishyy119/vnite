@@ -13,6 +13,7 @@ import { Switch } from '@ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { PlayStatusOrderEditor } from '~/components/Game/PlayStatusOrderEditor'
 import { useConfigState } from '~/hooks'
 import { cn } from '~/utils'
 import { useGameListStore, usePlayStatusOrderStore } from './store'
@@ -40,18 +41,6 @@ export function SortMenu({
   }
 
   const { playStatusOrder, setPlayStatusOrder } = usePlayStatusOrderStore()
-  const handleMoveUp = (index: number): void => {
-    if (index === 0) return
-    const newOrder: string[] = [...playStatusOrder]
-    ;[newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]]
-    setPlayStatusOrder([...newOrder])
-  }
-  const handleMoveDown = (index: number): void => {
-    if (index === playStatusOrder.length - 1) return
-    const newOrder: string[] = [...playStatusOrder]
-    ;[newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]]
-    setPlayStatusOrder([...newOrder])
-  }
 
   return (
     <Popover open={isSortMenuOpen} onOpenChange={setIsSortMenuOpen}>
@@ -91,6 +80,9 @@ export function SortMenu({
                   <SelectItem value="record.score">{t('list.all.sortOptions.score')}</SelectItem>
                   <SelectItem value="record.storageSize">
                     {t('list.all.sortOptions.storageSize')}
+                  </SelectItem>
+                  <SelectItem value="record.playStatus">
+                    {t('list.all.sortOptions.playStatus')}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
@@ -149,44 +141,7 @@ export function SortMenu({
           {selectedGroup === 'record.playStatus' && (
             <>
               <Separator />
-              <div className="flex flex-col gap-3">
-                {playStatusOrder.map((value, index) => (
-                  <React.Fragment key={value}>
-                    <div className="flex flex-col gap-1">
-                      <div
-                        className={cn(
-                          'flex flex-row gap-3 items-center justify-between',
-                          'ml-5 mr-5'
-                        )}
-                      >
-                        <div className={cn('text-sm whitespace-nowrap')}>
-                          {t(`utils:game.playStatus.${value}`)}
-                        </div>
-                        <div className="flex flex-row gap-1">
-                          <Button
-                            variant="outline"
-                            size={'icon'}
-                            className={cn('h-[26px] w-[26px] ml-1')}
-                            disabled={index === 0}
-                            onClick={() => handleMoveUp(index)}
-                          >
-                            <span className={cn('icon-[mdi--keyboard-arrow-up] w-4 h-4')}></span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size={'icon'}
-                            className={cn('h-[26px] w-[26px] ml-1')}
-                            disabled={index === playStatusOrder.length - 1}
-                            onClick={() => handleMoveDown(index)}
-                          >
-                            <span className={cn('icon-[mdi--keyboard-arrow-down] w-4 h-4')}></span>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </React.Fragment>
-                ))}
-              </div>
+              <PlayStatusOrderEditor order={playStatusOrder} onOrderChange={setPlayStatusOrder} />
             </>
           )}
 

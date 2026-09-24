@@ -47,7 +47,8 @@
         "addDate": "Date Added",
         "playTime": "Play Time",
         "score": "Score",
-        "storageSize": "Game Size"
+        "storageSize": "Game Size",
+        "playStatus": "Play Status"
       }
     },
     "playStatus": {
@@ -106,7 +107,8 @@
         "playTime": "Play Time",
         "score": "Score",
         "custom": "Custom Order",
-        "storageSize": "Game Size"
+        "storageSize": "Game Size",
+        "playStatus": "Play Status"
       }
     },
     "gameCard": {

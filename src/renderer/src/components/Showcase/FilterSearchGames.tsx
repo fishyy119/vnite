@@ -67,6 +67,9 @@ export function FilterSearchGamesComponent({
                 <SelectItem value="record.playTime">
                   {t('showcase.sorting.options.playTime')}
                 </SelectItem>
+                <SelectItem value="record.playStatus">
+                  {t('showcase.sorting.options.playStatus')}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
