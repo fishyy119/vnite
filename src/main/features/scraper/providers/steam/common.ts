@@ -107,9 +107,31 @@ async function resolveSteamAppDetails(
     try {
       const url = `${STEAM_URLS.STORE}/api/appdetails?appids=${appId}&l=${language}&cc=${countryCode}`
       const response = (await fetchSteamAPI(url)) as SteamAppDetailsResponse
-      const result = response[appId]
+      /**
+       * The Steam Store appdetails API normally returns an object keyed by an app ID:
+       * {
+       *   "<outer app ID>": {
+       *     "success": true,
+       *     "data": { "steam_appid": <inner app ID>, ... }
+       *   }
+       * }
+       *
+       * In normal responses, the requested app ID, the outer object key, and data.steam_appid
+       * are typically identical, so responses have traditionally been accessed with response[appId].
+       *
+       * Historically, however, there have been brief periods where the outer key was observed
+       * to differ from both the requested app ID and data.steam_appid. The API later returned
+       * to the usual behavior, and the cause of the discrepancy remains unknown.
+       *
+       * Since the outer key has no documented semantics and may not reliably identify the
+       * returned app, use data.steam_appid as the authoritative ID when matching responses.
+       */
+      // const result = response[appId]
+      const result = Object.values(response).find(
+        ({ success, data }) => success && data && String(data.steam_appid) === appId
+      )
 
-      if (result?.success && result.data) {
+      if (result?.data) {
         steamAppCountryCodeCache[appId] = countryCode
         cacheSteamAppDetails(appId, language, result.data)
         errors.forEach((error) => logScraperError(error, 'Steam', 'region fallback', 'warn'))

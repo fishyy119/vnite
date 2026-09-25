@@ -13,6 +13,7 @@ export interface SteamStoreSearchResponse {
 }
 
 export type SteamAppDetailsData = {
+  steam_appid: number
   name: string
   detailed_description?: string
   short_description?: string
