@@ -621,6 +621,7 @@
           "empty": "Please enter a link address"
         },
         "crop": {
+          "lockWideCoverAspect": "Lock aspect ratio",
           "title": "Adjust Image Size",
           "size": "{{width}} × {{height}} px"
         },

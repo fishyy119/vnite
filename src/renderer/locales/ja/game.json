@@ -621,6 +621,7 @@
           "empty": "リンクアドレスを入力してください"
         },
         "crop": {
+          "lockWideCoverAspect": "縦横比を固定",
           "title": "画像サイズを調整",
           "size": "{{width}} × {{height}} px"
         },

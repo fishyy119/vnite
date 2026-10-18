@@ -621,6 +621,7 @@
           "empty": "請輸入連結地址"
         },
         "crop": {
+          "lockWideCoverAspect": "鎖定長寬比",
           "title": "調整圖片大小",
           "size": "{{width}} × {{height}} px"
         },

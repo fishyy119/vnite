@@ -1,3 +1,4 @@
+import type { GameMediaType } from '@appTypes/models'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactCrop, { Crop } from 'react-image-crop'
@@ -6,12 +7,29 @@ import { toast } from 'sonner'
 import { ipcManager } from '~/app/ipc'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { cn } from '~/utils'
+
+const WIDE_COVER_ASPECT = 3 / 2
+
+function fitWideCoverCrop(crop: Crop): Crop {
+  const width = Math.min(crop.width, crop.height * WIDE_COVER_ASPECT)
+  const height = width / WIDE_COVER_ASPECT
+
+  return {
+    ...crop,
+    x: crop.x + (crop.width - width) / 2,
+    y: crop.y + (crop.height - height) / 2,
+    width,
+    height
+  }
+}
 
 interface CropDialogProps {
   isOpen: boolean
   onClose: () => void
   imagePath: string | null
+  mediaType?: GameMediaType
   onCropComplete: (filePath: string) => void | Promise<void>
 }
 
@@ -19,9 +37,12 @@ export function CropDialog({
   isOpen,
   onClose,
   imagePath,
+  mediaType,
   onCropComplete
 }: CropDialogProps): React.JSX.Element | null {
   const { t } = useTranslation('game')
+  const isWideCover = mediaType === 'wideCover'
+  const [isAspectLocked, setIsAspectLocked] = useState(isWideCover)
   const [crop, setCrop] = useState<Crop>({
     unit: 'px',
     width: 0,
@@ -34,29 +55,46 @@ export function CropDialog({
   // Add state to store the original size of the image
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
 
-  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>): void => {
-    const { width, height, naturalWidth, naturalHeight } = e.currentTarget
+  const onImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>): void => {
+      const { width, height, naturalWidth, naturalHeight } = e.currentTarget
 
-    // Storing the original size of an image
-    setImageSize({ width: naturalWidth, height: naturalHeight })
+      // Storing the original size of an image
+      setImageSize({ width: naturalWidth, height: naturalHeight })
 
-    // Calculating scaling
-    const scale = naturalWidth / width
-    console.log('Image scaling:', scale)
-    console.log('Display size:', width, height)
-    console.log('Original size:', naturalWidth, naturalHeight)
+      // Calculating scaling
+      const scale = naturalWidth / width
+      console.log('Image scaling:', scale)
+      console.log('Display size:', width, height)
+      console.log('Original size:', naturalWidth, naturalHeight)
 
-    // Set the cropping area to the display size of the whole image
-    const cropUpdate: Crop = {
-      unit: 'px',
-      width,
-      height,
-      x: 0,
-      y: 0
-    }
+      // Set the cropping area to the display size of the whole image
+      let cropUpdate: Crop = {
+        unit: 'px',
+        width,
+        height,
+        x: 0,
+        y: 0
+      }
+      // Wide covers start with the largest centered crop matching recent game posters.
+      if (isWideCover) {
+        cropUpdate = fitWideCoverCrop(cropUpdate)
+      }
+      setCrop(cropUpdate)
+      setCompletedCrop(cropUpdate)
+    },
+    [isWideCover]
+  )
+
+  const handleAspectLockChange = (locked: boolean): void => {
+    setIsAspectLocked(locked)
+    if (!locked) return
+
+    // Re-lock within the current selection; the button requires a valid crop.
+    const cropUpdate = fitWideCoverCrop(crop)
     setCrop(cropUpdate)
     setCompletedCrop(cropUpdate)
-  }, [])
+  }
 
   // Add Size Display
   const displaySize = useMemo(() => {
@@ -111,18 +149,51 @@ export function CropDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={cn('w-auto')} showCloseButton={false}>
-        <DialogHeader>
+      <DialogContent
+        className={cn('w-auto')}
+        showCloseButton={false}
+        onOpenAutoFocus={(event) => {
+          if (isWideCover) {
+            // Prevent the lock button's tooltip from showing when the dialog opens.
+            event.preventDefault()
+          }
+        }}
+      >
+        <DialogHeader className={cn('flex-row items-center justify-between text-left')}>
           <DialogTitle>
             {t('detail.properties.media.crop.title')}
             {displaySize && (
               <span className={cn('ml-2 text-sm text-muted-foreground')}>({displaySize})</span>
             )}
           </DialogTitle>
+          {isWideCover && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="bare"
+                  size="icon"
+                  className={cn(isAspectLocked ? 'text-primary' : 'text-foreground')}
+                  disabled={
+                    imageSize.width <= 0 ||
+                    imageSize.height <= 0 ||
+                    crop.width <= 0 ||
+                    crop.height <= 0
+                  }
+                  onClick={() => handleAspectLockChange(!isAspectLocked)}
+                >
+                  <span className={cn('size-4 icon-[mdi--lock]')} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('detail.properties.media.crop.lockWideCoverAspect')}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </DialogHeader>
         <div className={cn('flex flex-col gap-4')}>
           <ReactCrop
             crop={crop}
+            aspect={isWideCover && isAspectLocked ? WIDE_COVER_ASPECT : undefined}
             onChange={(c) => {
               setCrop(c)
               setCompletedCrop(c)
