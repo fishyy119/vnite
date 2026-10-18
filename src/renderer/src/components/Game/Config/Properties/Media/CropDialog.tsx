@@ -7,8 +7,15 @@ import { toast } from 'sonner'
 import { ipcManager } from '~/app/ipc'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '~/components/ui/dialog'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
+import { HelpTooltip, Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
+import { useLibraryStore } from '~/pages/Library/store'
+import { useConfigStore } from '~/stores'
 import { cn } from '~/utils'
+import {
+  GAME_DETAIL_BACKGROUND_FADE_END,
+  GAME_DETAIL_BACKGROUND_TOP,
+  getGameDetailBackgroundLeft
+} from '~/utils/game-background'
 
 const WIDE_COVER_ASPECT = 3 / 2
 
@@ -54,6 +61,28 @@ export function CropDialog({
   const [completedCrop, setCompletedCrop] = useState<Crop | null>(null)
   // Add state to store the original size of the image
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
+
+  const isBackground = mediaType === 'background'
+  // Show a guide within the crop for the detail page background's visible extent after fade-out clipping.
+  const backgroundFadeRatio = useMemo(() => {
+    if (!isBackground) return null
+
+    const width =
+      window.innerWidth - getGameDetailBackgroundLeft(useLibraryStore.getState().libraryBarWidth)
+    const height = window.innerHeight - GAME_DETAIL_BACKGROUND_TOP
+    const maxImageHeight =
+      (window.innerHeight *
+        useConfigStore.getState().getConfigValue('appearances.gameDetail.headerImageMaxHeight')) /
+      100
+    if (width <= 0 || height <= 0 || maxImageHeight <= 0) return null
+
+    // Match the gradient rendering in pages/Light.tsx
+    return Math.min(maxImageHeight, height * GAME_DETAIL_BACKGROUND_FADE_END) / width
+  }, [isBackground])
+  const backgroundFadeEnd =
+    backgroundFadeRatio !== null && crop.width > 0 && crop.height > 0
+      ? Math.min(1, (backgroundFadeRatio * crop.width) / crop.height) * 100
+      : null
 
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>): void => {
@@ -153,8 +182,8 @@ export function CropDialog({
         className={cn('w-auto')}
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
-          if (isWideCover) {
-            // Prevent the lock button's tooltip from showing when the dialog opens.
+          if (isWideCover || isBackground) {
+            // Prevent the header button's tooltip from showing when the dialog opens.
             event.preventDefault()
           }
         }}
@@ -166,6 +195,11 @@ export function CropDialog({
               <span className={cn('ml-2 text-sm text-muted-foreground')}>({displaySize})</span>
             )}
           </DialogTitle>
+          {isBackground && (
+            <HelpTooltip side="bottom" className={cn('max-w-80 whitespace-normal text-wrap')}>
+              {t('detail.properties.media.crop.backgroundGuideHelp')}
+            </HelpTooltip>
+          )}
           {isWideCover && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -200,6 +234,19 @@ export function CropDialog({
             }}
             onComplete={(c) => setCompletedCrop(c)}
             ruleOfThirds
+            renderSelectionAddon={() =>
+              backgroundFadeEnd !== null &&
+              backgroundFadeEnd < 100 && (
+                <div
+                  className={cn(
+                    'pointer-events-none absolute inset-x-px bottom-px', // avoid covering the crop selection's dashed outline.
+                    'border-t-2 border-dashed border-foreground',
+                    'bg-background/50 bg-clip-padding'
+                  )}
+                  style={{ top: `calc(${backgroundFadeEnd}% - 2px)` }}
+                />
+              )
+            }
             className={cn('max-h-[60vh] w-auto')}
           >
             <img
