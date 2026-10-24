@@ -46,9 +46,7 @@ export function ManageMenu({
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false)
   const { refreshGameList } = useLibrarybarStore.getState()
   // Open the game metadata adder dialog in single game updater mode
-  const setIsOpen = useGameAdderStore((state) => state.setIsOpen)
-  const setName = useGameAdderStore((state) => state.setName)
-  const setDbId = useGameAdderStore((state) => state.setDbId)
+  const openGameAdder = useGameAdderStore((state) => state.open)
   const { t } = useTranslation('game')
 
   const resetPreScore = (): void => setPreScore(score === -1 ? '' : score.toString())
@@ -154,9 +152,7 @@ export function ManageMenu({
               {/* Update Metadata */}
               <ContextMenuItem
                 onClick={() => {
-                  setDbId(gameId)
-                  setName(gameName)
-                  setIsOpen(true)
+                  openGameAdder({ dbId: gameId, name: gameName })
                 }}
               >
                 {t('detail.manage.downloadMetadata')}

@@ -3,9 +3,6 @@
     "dialog": {
       "title": "添加遊戲"
     },
-    "notifications": {
-      "loading": "請等待遊戲添加完成"
-    },
     "gameList": {
       "columns": {
         "name": "遊戲名稱",

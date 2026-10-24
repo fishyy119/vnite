@@ -3,9 +3,6 @@
     "dialog": {
       "title": "ゲームを追加"
     },
-    "notifications": {
-      "loading": "ゲームの追加が完了するまでお待ちください"
-    },
     "gameList": {
       "columns": {
         "name": "ゲーム名",

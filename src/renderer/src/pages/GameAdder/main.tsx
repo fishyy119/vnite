@@ -1,53 +1,38 @@
-import { cn } from '~/utils'
-import { Dialog, DialogContent } from '~/components/ui/dialog'
-import { useGameAdderStore, initializeStore } from './store'
-import { useEffect } from 'react'
-import { useConfigState } from '~/hooks'
-import { Search } from './Search'
-import { GameList } from './GameList'
+import { useTranslation } from 'react-i18next'
+import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BackgroundList } from './BackgroundList'
+import { Search } from './Search'
+import { useGameAdderStore } from './store'
 
-function GameAdderContent(): React.JSX.Element {
-  const { isOpen, currentPage, handleClose } = useGameAdderStore()
-  const [defaultDataSource] = useConfigState('game.scraper.common.defaultDataSource')
+export function GameAdder(): React.JSX.Element {
+  const { isOpen, currentPage, close } = useGameAdderStore()
+  const { t } = useTranslation('adder')
 
-  useEffect(() => {
-    const initStore = async (): Promise<void> => {
-      initializeStore(defaultDataSource)
-    }
-    initStore()
-  }, [defaultDataSource])
-
-  const renderCurrentPage = (): React.JSX.Element => {
+  const renderPage = (): React.JSX.Element => {
     switch (currentPage) {
       case 'search':
         return <Search />
-      case 'games':
-        return <GameList />
       case 'backgrounds':
         return <BackgroundList />
-      default:
-        return <Search />
     }
   }
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent
-        className={cn('w-auto h-auto max-w-none flex flex-col gap-5 outline-none')}
-        onInteractOutside={(e) => {
-          e.preventDefault()
-        }}
-        onClose={() => {
-          handleClose()
-        }}
-      >
-        {renderCurrentPage()}
-      </DialogContent>
+      {isOpen && (
+        <DialogContent
+          className="flex h-auto w-auto max-w-none flex-col gap-5 outline-none"
+          onClose={close}
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => {
+            event.preventDefault()
+            close()
+          }}
+        >
+          <DialogTitle className="sr-only">{t('gameAdder.dialog.title')}</DialogTitle>
+          {renderPage()}
+        </DialogContent>
+      )}
     </Dialog>
   )
-}
-
-export function GameAdder(): React.JSX.Element {
-  return <GameAdderContent />
 }
