@@ -13,7 +13,7 @@ export type GameList = {
   developers: string[]
 }[]
 
-export type GameAdderPage = 'search' | 'backgrounds'
+export type GameAdderPage = 'search' | 'review' | 'backgrounds'
 
 export interface GameAdderDraft {
   dbId: string
@@ -35,6 +35,7 @@ interface GameAdderSession {
   draft: GameAdderDraft
   gameList: GameList
   backgroundList: string[]
+  reviewIds: string[]
   providers: { id: string; name: string }[] | null
 }
 
@@ -63,6 +64,7 @@ function emptySession(): GameAdderSession {
     },
     gameList: [],
     backgroundList: [],
+    reviewIds: [],
     providers: null
   }
 }

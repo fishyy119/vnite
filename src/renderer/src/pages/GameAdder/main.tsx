@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BackgroundList } from './BackgroundList'
+import { DuplicateReview } from './DuplicateReview'
 import { Search } from './Search'
 import { useGameAdderStore } from './store'
 
@@ -12,6 +13,8 @@ export function GameAdder(): React.JSX.Element {
     switch (currentPage) {
       case 'search':
         return <Search />
+      case 'review':
+        return <DuplicateReview />
       case 'backgrounds':
         return <BackgroundList />
     }
@@ -29,7 +32,9 @@ export function GameAdder(): React.JSX.Element {
             close()
           }}
         >
-          <DialogTitle className="sr-only">{t('gameAdder.dialog.title')}</DialogTitle>
+          {currentPage !== 'review' && (
+            <DialogTitle className="sr-only">{t('gameAdder.dialog.title')}</DialogTitle>
+          )}
           {renderPage()}
         </DialogContent>
       )}

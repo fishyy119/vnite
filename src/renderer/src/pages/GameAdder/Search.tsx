@@ -17,6 +17,7 @@ import {
 } from '~/components/ui/select'
 import { useGameLocalState } from '~/hooks'
 import { cn } from '~/utils'
+import type { DuplicateCheckInput } from './duplicates'
 import { gameAdderFlow } from './flow'
 import { GameList } from './GameList'
 import { useGameAdderStore } from './store'
@@ -109,12 +110,28 @@ export function Search(): React.JSX.Element {
     useGameAdderStore.setState({ pending: true })
     toast.promise(
       async (): Promise<void> => {
-        if (draft.dataSource !== 'none') {
+        let candidate: DuplicateCheckInput | null = null
+        if (draft.dbId) {
           const exists = await ipcManager.invoke('scraper:check-game-exists', draft.dataSource, {
             type: 'id',
             value: draft.dataSourceId
           })
           if (!exists) throw new Error(t('gameAdder.search.notifications.invalidId'))
+        } else if (draft.dataSource === 'none') {
+          const name = window.api.path.basename(draft.dirPath || draft.gamePath)
+          candidate = { name, originalName: name }
+        } else {
+          const metadata = await ipcManager.invoke('scraper:get-game-metadata', draft.dataSource, {
+            type: 'id',
+            value: draft.dataSourceId
+          })
+          if (!metadata) throw new Error()
+          candidate = {
+            name: metadata.name,
+            originalName: metadata.originalName,
+            dataSource: draft.dataSource,
+            dataSourceId: draft.dataSourceId
+          }
         }
         // Commit the selection used by this request before advancing the flow.
         updateDraft({
@@ -123,7 +140,7 @@ export function Search(): React.JSX.Element {
           dirPath: draft.dirPath,
           gamePath: draft.gamePath
         })
-        gameAdderFlow.confirmCandidate()
+        gameAdderFlow.confirmCandidate(candidate)
       },
       {
         loading:

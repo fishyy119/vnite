@@ -12,6 +12,10 @@
       "unknown": "未知",
       "selected": "已选择游戏: {{name}}"
     },
+    "duplicates": {
+      "title": "可能重复的游戏",
+      "continueAnyway": "继续添加"
+    },
     "backgrounds": {
       "title": "背景图片",
       "noImages": "暂无图片",

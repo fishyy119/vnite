@@ -12,6 +12,10 @@
       "unknown": "Unknown",
       "selected": "Selected game: {{name}}"
     },
+    "duplicates": {
+      "title": "Possible duplicates",
+      "continueAnyway": "Continue"
+    },
     "backgrounds": {
       "title": "Background Image",
       "noImages": "No images",

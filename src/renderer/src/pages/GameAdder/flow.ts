@@ -2,6 +2,7 @@ import i18next from 'i18next'
 import { toast } from 'sonner'
 import { ipcManager } from '~/app/ipc'
 import { useGameMetadataUpdaterStore } from '../GameMetadataUpdater/store'
+import { getLibraryDuplicateIds, type DuplicateCheckInput } from './duplicates'
 import { useGameAdderStore, type GameAdderDraft, type GameAdderState } from './store'
 
 function addGameInBackground(draft: GameAdderDraft): void {
@@ -54,11 +55,30 @@ function finish(state: GameAdderState): void {
   }
 }
 
+function continueAfterReview(state: GameAdderState): void {
+  // Review sourced games before backgrounds, and local games before submission.
+  if (state.draft.dataSource === 'none') finish(state)
+  else state.goTo('backgrounds')
+}
+
 export const gameAdderFlow = {
-  confirmCandidate(): void {
+  confirmCandidate(candidate: DuplicateCheckInput | null): void {
     const state = useGameAdderStore.getState()
-    if (state.draft.dataSource === 'none') finish(state)
-    else state.goTo('backgrounds')
+    if (state.draft.dbId) {
+      state.goTo('backgrounds')
+      return
+    }
+    if (!candidate) return
+    const reviewIds = getLibraryDuplicateIds(candidate)
+    useGameAdderStore.setState({ reviewIds })
+    if (reviewIds.length) state.goTo('review')
+    else continueAfterReview(state)
+  },
+
+  confirmDuplicates(): void {
+    const state = useGameAdderStore.getState()
+    if (state.currentPage !== 'review') return
+    continueAfterReview(state)
   },
 
   confirmBackground(): void {

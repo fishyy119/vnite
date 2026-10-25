@@ -12,6 +12,10 @@
       "unknown": "不明",
       "selected": "選択されたゲーム: {{name}}"
     },
+    "duplicates": {
+      "title": "重複の可能性があるゲーム",
+      "continueAnyway": "続ける"
+    },
     "backgrounds": {
       "title": "背景画像",
       "noImages": "画像なし",
