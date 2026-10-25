@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogTitle } from '~/components/ui/dialog'
 import { BackgroundList } from './BackgroundList'
-import { DuplicateReview } from './DuplicateReview'
+import { DuplicateReview } from '~/components/Game/DuplicateReview'
+import { gameAdderFlow } from './flow'
 import { Search } from './Search'
 import { useGameAdderStore } from './store'
 
 export function GameAdder(): React.JSX.Element {
-  const { isOpen, currentPage, close } = useGameAdderStore()
+  const { isOpen, currentPage, reviewIds, close } = useGameAdderStore()
   const { t } = useTranslation('adder')
 
   const renderPage = (): React.JSX.Element => {
@@ -14,7 +15,7 @@ export function GameAdder(): React.JSX.Element {
       case 'search':
         return <Search />
       case 'review':
-        return <DuplicateReview />
+        return <DuplicateReview gameIds={reviewIds} onConfirm={gameAdderFlow.confirmDuplicates} />
       case 'backgrounds':
         return <BackgroundList />
     }

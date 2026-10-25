@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import { toast } from 'sonner'
 import { ipcManager } from '~/app/ipc'
 import { useGameMetadataUpdaterStore } from '../GameMetadataUpdater/store'
-import { getLibraryDuplicateIds, type DuplicateCheckInput } from './duplicates'
+import { getLibraryDuplicateIds, type DuplicateCheckInput } from '~/utils/gameDuplicates'
 import { useGameAdderStore, type GameAdderDraft, type GameAdderState } from './store'
 
 function addGameInBackground(draft: GameAdderDraft): void {

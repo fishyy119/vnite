@@ -6,8 +6,6 @@ import { DialogTitle } from '@ui/dialog'
 import { GameImage } from '@ui/game-image'
 import { useGameRegistry } from '~/stores/game/gameRegistry'
 import { getGameStore } from '~/stores/game/gameStoreFactory'
-import { gameAdderFlow } from './flow'
-import { useGameAdderStore } from './store'
 
 function DuplicateGameItem({ gameId }: { gameId: string }): React.JSX.Element | null {
   const { t } = useTranslation('adder')
@@ -53,9 +51,14 @@ function DuplicateGameItem({ gameId }: { gameId: string }): React.JSX.Element | 
   )
 }
 
-export function DuplicateReview(): React.JSX.Element {
+export function DuplicateReview({
+  gameIds,
+  onConfirm
+}: {
+  gameIds: string[]
+  onConfirm: () => void
+}): React.JSX.Element {
   const { t } = useTranslation('adder')
-  const gameIds = useGameAdderStore((state) => state.reviewIds)
 
   return (
     <div className="flex h-[80vh] w-[560px] flex-col gap-4 p-3">
@@ -71,7 +74,7 @@ export function DuplicateReview(): React.JSX.Element {
         ))}
       </ul>
       <div className="flex shrink-0 justify-end">
-        <Button variant="outline" onClick={gameAdderFlow.confirmDuplicates}>
+        <Button variant="outline" onClick={onConfirm}>
           {t('gameAdder.duplicates.continueAnyway')}
         </Button>
       </div>

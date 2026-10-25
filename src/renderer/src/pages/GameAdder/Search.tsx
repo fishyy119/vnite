@@ -17,7 +17,7 @@ import {
 } from '~/components/ui/select'
 import { useGameLocalState } from '~/hooks'
 import { cn } from '~/utils'
-import type { DuplicateCheckInput } from './duplicates'
+import type { DuplicateCheckInput } from '~/utils/gameDuplicates'
 import { gameAdderFlow } from './flow'
 import { GameList } from './GameList'
 import { useGameAdderStore } from './store'
