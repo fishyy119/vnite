@@ -8,6 +8,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+vnite-process-monitor = { path = "process-monitor" }
 chrono = "0.4.42"
 napi = { version = "3.0.0", features = ["async"] }
 napi-derive = "3.0.0"
@@ -17,12 +18,7 @@ tokio = { version = "1.47.1", features = ["full"] }
 windows = { version = "0.62", features = [
   "Win32_System_Diagnostics_ToolHelp",
   "Win32_System_Threading",
-  "Win32_System_Com",
-  "Win32_System_Wmi",
-  "Win32_System_Variant",
   "Win32_Security",
-  "Win32_System_Rpc",
-  "Win32_System_Ole",
   "UI_Notifications",
   "Data_Xml_Dom",
   "Win32_UI_Accessibility",

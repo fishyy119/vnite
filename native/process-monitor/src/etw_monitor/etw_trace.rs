@@ -5,8 +5,7 @@ use windows::{
   Win32::{Foundation, System::Diagnostics::Etw, System::Time},
 };
 
-use crate::log;
-use crate::monitor::{ProcessMessage, ProcessStatus};
+use crate::{Logger, ProcessMessage, ProcessStatus};
 
 // Private session GUID (just wrote down a random GUID, can be changed at will)
 const SESSION_GUID: GUID = GUID::from_u128(0xae44cb98_bd11_4069_10be_7dea1390e2ff);
@@ -59,10 +58,11 @@ pub struct EtwTrace {
   consumer_handle: Option<std::thread::JoinHandle<()>>,
 
   context: Option<Box<DecoderContext>>,
+  logger: Logger,
 }
 
 impl EtwTrace {
-  pub fn new(session_name: &str) -> Self {
+  pub fn new(session_name: &str, logger: Logger) -> Self {
     EtwTrace {
       // convert Rust utf8 string to utf16 (wstring) and append a wide '\0' at the end
       session_name_wide: session_name
@@ -74,6 +74,7 @@ impl EtwTrace {
       trace_handle: Etw::PROCESSTRACE_HANDLE { Value: 0 },
       consumer_handle: None,
       context: None,
+      logger,
     }
   }
 
@@ -121,7 +122,7 @@ impl EtwTrace {
   /// Starts a trace session.
   /// Event consumer is not activated at this time until `consume_events()` is invoked.
   pub fn start_trace(&mut self) -> Result<()> {
-    log::info("starting ETW trace session...");
+    self.logger.info("starting ETW trace session...");
 
     // stop existing session if any
     let result = self.stop_trace(true);
@@ -142,7 +143,7 @@ impl EtwTrace {
       );
       if result.is_err() {
         let hres = HRESULT::from_win32(result.0);
-        log::error(
+        self.logger.error(
           format!(
             "failed to start trace session: {} (0x{:x})",
             hres.message(),
@@ -168,7 +169,7 @@ impl EtwTrace {
       );
       if result.is_err() {
         let hres = HRESULT::from_win32(result.0);
-        log::error(
+        self.logger.error(
           format!(
             "failed to enable trace: {} (0x{:x})",
             hres.message(),
@@ -180,7 +181,7 @@ impl EtwTrace {
       }
     }
 
-    log::info(
+    self.logger.info(
       format!(
         "ETW trace session started, session handle: 0x{:x}",
         self.session_handle.Value
@@ -202,7 +203,7 @@ impl EtwTrace {
     let mut session_name_wide = self.session_name_wide.clone();
 
     // create a context
-    self.context = Some(Box::new(DecoderContext::new(tx)));
+    self.context = Some(Box::new(DecoderContext::new(tx, self.logger.clone())));
 
     // define the EVENT_TRACE_LOGFILEW struct
     let mut trace_log_file = Etw::EVENT_TRACE_LOGFILEW {
@@ -223,7 +224,7 @@ impl EtwTrace {
       if trace_handle.Value == 0xFFFFFFFFFFFFFFFF {
         let err = Foundation::GetLastError();
         let hres = HRESULT::from_win32(err.0);
-        log::error(
+        self.logger.error(
           format!(
             "failed to open trace for the session: {} (0x:{:x})",
             hres.message(),
@@ -237,8 +238,9 @@ impl EtwTrace {
       // transfer the ownership of trace handle to self
       self.trace_handle = trace_handle;
       // spawn consumer thread
+      let logger = self.logger.clone();
       self.consumer_handle = Some(std::thread::spawn(move || {
-        Self::consumer_task(trace_handle)
+        Self::consumer_task(trace_handle, logger)
       }));
     }
 
@@ -257,7 +259,7 @@ impl EtwTrace {
         // ERROR_CTX_CLOSE_PENDING is treated as successful
         if result.is_err() && result != Foundation::ERROR_CTX_CLOSE_PENDING {
           let hres = HRESULT::from_win32(result.0);
-          log::error(
+          self.logger.error(
             format!("failed to close trace: {} (0x{:x})", hres.message(), hres.0).as_str(),
           );
           // not returning so early on errors, must try to stop the session
@@ -280,7 +282,7 @@ impl EtwTrace {
         );
         if result.is_err() {
           let hres = HRESULT::from_win32(result.0);
-          log::error(
+          self.logger.error(
             format!(
               "failed to disable trace: {} (0x{:x})",
               hres.message(),
@@ -306,10 +308,10 @@ impl EtwTrace {
       );
       if result.is_err() {
         if result == Foundation::ERROR_WMI_INSTANCE_NOT_FOUND && ignore_non_existing {
-          log::debug("ignoring non existing trace session on stop_trace");
+          self.logger.debug("ignoring non existing trace session on stop_trace");
         } else {
           let hres = HRESULT::from_win32(result.0);
-          log::error(
+          self.logger.error(
             format!(
               "failed to stop trace session: {} (0x{:x})",
               hres.message(),
@@ -320,7 +322,7 @@ impl EtwTrace {
           return Err(Error::from_hresult(hres));
         }
       } else {
-        log::info("ETW trace session has been gracefully stopped");
+        self.logger.info("ETW trace session has been gracefully stopped");
       }
     }
 
@@ -333,16 +335,16 @@ impl EtwTrace {
     Ok(())
   }
 
-  unsafe fn consumer_task(trace_handle: Etw::PROCESSTRACE_HANDLE) {
-    log::info("ETW monitor consumer thread has been spawned");
+  unsafe fn consumer_task(trace_handle: Etw::PROCESSTRACE_HANDLE, logger: Logger) {
+    logger.info("ETW monitor consumer thread has been spawned");
     // ProcessTrace will block forever until CloseTrace is invoked when processing real-time events
     let result = Etw::ProcessTrace(&[trace_handle], None, None);
     if result.is_err() {
       if result == Foundation::ERROR_CANCELLED {
-        log::info("ProcessTrace is terminated");
+        logger.info("ProcessTrace is terminated");
       } else {
         let hres = HRESULT::from_win32(result.0);
-        log::error(
+        logger.error(
           format!(
             "failed to process trace: {} (0x{:x})",
             hres.message(),
@@ -377,11 +379,12 @@ impl Drop for EtwTrace {
 
 struct DecoderContext {
   tx: mpsc::Sender<ProcessMessage>,
+  logger: Logger,
 }
 
 impl DecoderContext {
-  pub fn new(tx: mpsc::Sender<ProcessMessage>) -> Self {
-    Self { tx }
+  pub fn new(tx: mpsc::Sender<ProcessMessage>, logger: Logger) -> Self {
+    Self { tx, logger }
   }
 
   pub fn process_event_record(&self, record: &Etw::EVENT_RECORD) {
@@ -431,7 +434,7 @@ impl DecoderContext {
 
     // Parse the structure according to ProcessStopArgs_V2 template
     if 4 > data_length {
-      log::error("buffer overflow while reading data");
+      self.logger.error("buffer overflow while reading data");
       return;
     }
     let process_id = (data_ptr as *const u32).read_unaligned();
@@ -442,7 +445,7 @@ impl DecoderContext {
       path: String::new(),
     }) {
       Err(e) => {
-        log::error(
+        self.logger.error(
           format!(
             "failed to send a process stop information, pid: {}: {:?}",
             process_id, e
@@ -488,7 +491,7 @@ impl DecoderContext {
     macro_rules! read_value {
       ($type:ty) => {{
         if offset + mem::size_of::<$type>() > data_length {
-          log::error("Buffer overflow while reading data");
+          self.logger.error("Buffer overflow while reading data");
           return;
         }
         let value = (data_ptr.add(offset) as *const $type).read_unaligned();
@@ -517,7 +520,7 @@ impl DecoderContext {
       let sid_size = 8 + (sub_authority_count as usize * 4); // 8 bytes header + 4 bytes per SubAuthority
       offset += sid_size;
     } else {
-      log::error("failed to parse SID");
+      self.logger.error("failed to parse SID");
       return;
     }
 
@@ -533,7 +536,7 @@ impl DecoderContext {
         path: path,
       }) {
         Err(e) => {
-          log::error(
+          self.logger.error(
             format!(
               "failed to send a process start information, pid: {}: {:?}",
               process_id, e
@@ -544,7 +547,7 @@ impl DecoderContext {
         Ok(_) => {}
       }
     } else {
-      log::error("failed to parse ImageName");
+      self.logger.error("failed to parse ImageName");
     }
   }
 

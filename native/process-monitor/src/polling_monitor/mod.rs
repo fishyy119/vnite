@@ -3,8 +3,7 @@ use tokio::{
   task,
 };
 
-use super::{gm, ProcessMessage, WinProcessMonitor};
-use crate::log;
+use crate::{Logger, ProcessHandler, ProcessMessage, WinProcessMonitor};
 
 mod polling;
 
@@ -16,15 +15,19 @@ pub struct PollingMonitor {
   term_sender: Option<broadcast::Sender<()>>,
 
   manual_update_sender: Option<mpsc::Sender<()>>,
+  process_handler: ProcessHandler,
+  logger: Logger,
 }
 
 impl PollingMonitor {
-  pub fn new() -> Self {
+  pub fn new(process_handler: ProcessHandler, logger: Logger) -> Self {
     Self {
       tx_handle: None,
       rx_handle: None,
       term_sender: None,
       manual_update_sender: None,
+      process_handler,
+      logger,
     }
   }
 
@@ -32,10 +35,11 @@ impl PollingMonitor {
     tx: mpsc::Sender<ProcessMessage>,
     mut t_rx: broadcast::Receiver<()>,
     mut m_rx: mpsc::Receiver<()>,
+    logger: Logger,
   ) {
-    log::info("Polling monitor tx channel has been spawned");
+    logger.info("Polling monitor tx channel has been spawned");
     // create a polling object
-    let mut polling = polling::Polling::new(tx);
+    let mut polling = polling::Polling::new(tx, logger.clone());
     // update process status immediately once thread is spawned
     polling.update_process_status().await;
 
@@ -47,7 +51,7 @@ impl PollingMonitor {
         }
         // termination signal received
         _ = t_rx.recv() => {
-          log::info("Polling monitor tx channel has received a termination signal");
+          logger.info("Polling monitor tx channel has received a termination signal");
           break;
         }
         // manual update signal received
@@ -58,21 +62,26 @@ impl PollingMonitor {
     }
   }
 
-  async fn rx_task(mut rx: mpsc::Receiver<ProcessMessage>, mut t_rx: broadcast::Receiver<()>) {
-    log::info("Polling monitor rx channel has been spawned");
+  async fn rx_task(
+    mut rx: mpsc::Receiver<ProcessMessage>,
+    mut t_rx: broadcast::Receiver<()>,
+    process_handler: ProcessHandler,
+    logger: Logger,
+  ) {
+    logger.info("Polling monitor rx channel has been spawned");
     loop {
       tokio::select! {
         op_data = rx.recv() => {
           if let Some(data) = op_data {
             // log::info(format!("[FROM RX] pid: {}, path: {}, type: {:?}", data.pid, data.path, data.status).as_str());
-            gm::get().lock().await.handle_process_message(data);
+            process_handler(data).await;
           } else {
-            log::error("Polling monitor rx channel accidentally stopped, likely caused by termination of the tx half");
+            logger.error("Polling monitor rx channel accidentally stopped, likely caused by termination of the tx half");
             break;
           }
         }
         _ = t_rx.recv() => {
-          log::info("Polling monitor rx channel has received a termination signal");
+          logger.info("Polling monitor rx channel has received a termination signal");
           break;
         }
       }
@@ -82,7 +91,7 @@ impl PollingMonitor {
 
 impl WinProcessMonitor for PollingMonitor {
   fn start_monitoring(&mut self) -> windows_core::Result<()> {
-    log::info("Polling monitor is starting...");
+    self.logger.info("Polling monitor is starting...");
     // stop existing polling monitor
     self.stop_monitoring();
 
@@ -97,9 +106,14 @@ impl WinProcessMonitor for PollingMonitor {
     let (m_tx, m_rx) = mpsc::channel::<()>(2);
 
     // spawn a rx_task to handle process event message
-    let rx_handle = tokio::spawn(Self::rx_task(rx, t_rx));
+    let rx_handle = tokio::spawn(Self::rx_task(
+      rx,
+      t_rx,
+      self.process_handler.clone(),
+      self.logger.clone(),
+    ));
     // spawn a tx_task to start polling
-    let tx_handle = tokio::spawn(Self::tx_task(tx, t_rx2, m_rx));
+    let tx_handle = tokio::spawn(Self::tx_task(tx, t_rx2, m_rx, self.logger.clone()));
 
     // transfer the ownership of objects to self
     self.rx_handle = Some(rx_handle);
@@ -118,11 +132,11 @@ impl WinProcessMonitor for PollingMonitor {
     // ...or just abort them, since there is actually no cleanups need to do
     if let Some(rx_handle) = self.rx_handle.take() {
       rx_handle.abort();
-      log::info("Polling monitor rx channel has been stopped");
+      self.logger.info("Polling monitor rx channel has been stopped");
     }
     if let Some(tx_handle) = self.tx_handle.take() {
       tx_handle.abort();
-      log::info("Polling monitor tx channel has been stopped");
+      self.logger.info("Polling monitor tx channel has been stopped");
     }
   }
 

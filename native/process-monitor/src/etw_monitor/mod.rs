@@ -1,7 +1,6 @@
 use tokio::{sync::mpsc, task};
 
-use super::{gm, ProcessMessage, WinProcessMonitor};
-use crate::{log, win32};
+use crate::{win32, Logger, ProcessHandler, ProcessMessage, WinProcessMonitor};
 
 mod etw_trace;
 
@@ -12,19 +11,28 @@ pub struct EtwMonitor {
   tracer: Option<etw_trace::EtwTrace>,
   rx_handle: Option<task::JoinHandle<()>>,
   term_sender: Option<mpsc::Sender<()>>,
+  process_handler: ProcessHandler,
+  logger: Logger,
 }
 
 impl EtwMonitor {
-  pub fn new() -> Self {
+  pub fn new(process_handler: ProcessHandler, logger: Logger) -> Self {
     Self {
       tracer: None,
       rx_handle: None,
       term_sender: None,
+      process_handler,
+      logger,
     }
   }
 
-  async fn rx_task(mut rx: mpsc::Receiver<ProcessMessage>, mut t_rx: mpsc::Receiver<()>) {
-    log::info("ETW monitor rx channel has been spawned");
+  async fn rx_task(
+    mut rx: mpsc::Receiver<ProcessMessage>,
+    mut t_rx: mpsc::Receiver<()>,
+    process_handler: ProcessHandler,
+    logger: Logger,
+  ) {
+    logger.info("ETW monitor rx channel has been spawned");
     loop {
       tokio::select! {
         op_data = rx.recv() => {
@@ -37,9 +45,9 @@ impl EtwMonitor {
               }
               None => { }
             }
-            gm::get().lock().await.handle_process_message(data);
+            process_handler(data).await;
           } else {
-            log::error("ETW monitor rx channel accidentally stopped, likely caused by termination of the tx half");
+            logger.error("ETW monitor rx channel accidentally stopped, likely caused by termination of the tx half");
             break;
           }
         }
@@ -54,7 +62,7 @@ impl EtwMonitor {
 
 impl WinProcessMonitor for EtwMonitor {
   fn start_monitoring(&mut self) -> windows_core::Result<()> {
-    log::info("ETW monitor is starting...");
+    self.logger.info("ETW monitor is starting...");
     // stop existing trace session
     self.stop_monitoring();
 
@@ -64,12 +72,17 @@ impl WinProcessMonitor for EtwMonitor {
     let (tx, rx) = mpsc::channel::<ProcessMessage>(CHANNEL_SIZE);
 
     // create a EtwTrace and start tracing
-    let mut tracer = etw_trace::EtwTrace::new(TRACE_SESSION_NAME);
+    let mut tracer = etw_trace::EtwTrace::new(TRACE_SESSION_NAME, self.logger.clone());
     tracer.start_trace()?;
     tracer.consume_events(tx)?;
 
     // spawn a rx_task to handle process event message
-    let rx_handle = tokio::spawn(Self::rx_task(rx, t_rx));
+    let rx_handle = tokio::spawn(Self::rx_task(
+      rx,
+      t_rx,
+      self.process_handler.clone(),
+      self.logger.clone(),
+    ));
 
     // transfer the ownership of objects to self
     self.tracer = Some(tracer);
@@ -88,7 +101,7 @@ impl WinProcessMonitor for EtwMonitor {
     // ...or just abort it, since there is actually no cleanups need to do
     if let Some(rx_handle) = self.rx_handle.take() {
       rx_handle.abort();
-      log::info("ETW monitor rx channel has been aborted");
+      self.logger.info("ETW monitor rx channel has been aborted");
     }
 
     // spare rx task with 1 second to shutdown or forcefully abort it

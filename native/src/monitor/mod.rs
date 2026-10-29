@@ -1,9 +1,11 @@
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 use tokio::sync::Mutex;
+use vnite_process_monitor::{
+  EtwMonitor, LogLevel, Logger, PollingMonitor, ProcessHandler, WinProcessMonitor,
+};
 
 use crate::{
   log,
-  monitor::{etw_monitor::EtwMonitor, polling_monitor::PollingMonitor},
   napi_monitor::ProcessEvent,
   utils::types::NapiWeakThreadsafeFunction,
   win32,
@@ -11,26 +13,7 @@ use crate::{
 
 pub mod gm;
 
-mod etw_monitor;
-mod polling_monitor;
-
-trait WinProcessMonitor: Send {
-  fn start_monitoring(&mut self) -> windows_core::Result<()>;
-  fn stop_monitoring(&mut self);
-  fn manual_update_process_status(&mut self);
-}
-
-#[derive(Debug, PartialEq)]
-enum ProcessStatus {
-  Started,
-  Terminated,
-}
-
-pub struct ProcessMessage {
-  pid: u32,
-  status: ProcessStatus,
-  path: String,
-}
+pub use vnite_process_monitor::{ProcessMessage, ProcessStatus};
 
 static PROCESS_MONITOR: LazyLock<Mutex<Option<Box<dyn WinProcessMonitor + Send>>>> =
   LazyLock::new(|| Mutex::new(None));
@@ -53,15 +36,26 @@ pub async fn start_monitoring(
     .await
     .init(local_game_pathes, local_game_ids, callback);
 
+  let logger = Logger::new(|level, message| match level {
+    LogLevel::Info => log::info(message),
+    LogLevel::Error => log::error(message),
+    LogLevel::Debug => log::debug(message),
+  });
+  let process_handler: ProcessHandler = Arc::new(|message| {
+    Box::pin(async move {
+      gm::get().lock().await.handle_process_message(message);
+    })
+  });
+
   // initialize a monitor and start monitoring
   let is_elevated = win32::is_elevated_privilege();
   let mut monitor: Box<dyn WinProcessMonitor> = if is_elevated {
     log::info("application is running with elevated privilege, using ETW process monitor");
-    Box::new(EtwMonitor::new())
+    Box::new(EtwMonitor::new(process_handler, logger))
   } else {
     log::info("application is running with normal privilege, using polling monitor");
     // Box::new(WmiMonitor::new())
-    Box::new(PollingMonitor::new())
+    Box::new(PollingMonitor::new(process_handler, logger))
   };
 
   let result = monitor.start_monitoring();

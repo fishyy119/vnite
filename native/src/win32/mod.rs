@@ -1,22 +1,20 @@
 mod icon;
 mod notification;
-mod nt_path;
 mod privilege;
-mod process;
 
 use crate::{log, napi_win32::ProcessInfo};
 
 pub fn get_all_process() -> Vec<ProcessInfo> {
-  process::get_all_process()
+  vnite_process_monitor::win32::get_all_process()
+    .into_iter()
+    .map(|process| ProcessInfo {
+      pid: process.pid,
+      full_path: process.full_path,
+    })
+    .collect()
 }
 
-pub fn get_all_process_pid() -> Vec<u32> {
-  process::get_all_process_pid()
-}
-
-pub fn get_process_full_path_by_pid(pid: u32) -> String {
-  process::get_process_full_path_by_pid(pid)
-}
+pub use vnite_process_monitor::win32::get_process_full_path_by_pid;
 
 pub fn extract_executable_icon(path: &str) -> Result<Vec<u8>, String> {
   icon::extract_executable_icon(path)
@@ -31,10 +29,6 @@ pub fn is_elevated_privilege() -> bool {
     }
     Ok(v) => v,
   }
-}
-
-pub fn nt_to_dos_path(nt_path: &str) -> Option<String> {
-  nt_path::nt_to_dos_path(nt_path)
 }
 
 pub fn send_notification(

@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use tokio::sync::mpsc;
 
-use crate::monitor::{ProcessMessage, ProcessStatus};
-use crate::{log, win32};
+use crate::{win32, Logger, ProcessMessage, ProcessStatus};
 
 pub struct Polling {
   tx: mpsc::Sender<ProcessMessage>,
+  logger: Logger,
   process_cache: HashMap<u32, ProcessInfo>,
 }
 
@@ -18,9 +18,10 @@ struct ProcessInfo {
 }
 
 impl Polling {
-  pub fn new(tx: mpsc::Sender<ProcessMessage>) -> Self {
+  pub fn new(tx: mpsc::Sender<ProcessMessage>, logger: Logger) -> Self {
     Self {
       tx: tx,
+      logger,
       process_cache: HashMap::with_capacity(256usize),
     }
   }
@@ -62,7 +63,7 @@ impl Polling {
             .await
           {
             Err(e) => {
-              log::error(format!("failed to send a process info, pid: {}: {:?}", pid, e).as_str());
+              self.logger.error(format!("failed to send a process info, pid: {}: {:?}", pid, e).as_str());
             }
             Ok(()) => {}
           }
@@ -83,7 +84,7 @@ impl Polling {
           .await
         {
           Err(e) => {
-            log::error(
+            self.logger.error(
               format!(
                 "failed to send a process termination info, pid: {}: {:?}",
                 process.pid, e

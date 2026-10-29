@@ -12,7 +12,7 @@ use windows::Win32::{
   },
 };
 
-use crate::napi_win32::ProcessInfo;
+use crate::ProcessInfo;
 
 // RAII wrapper for Windows handles to ensure they're always closed
 struct HandleGuard(HANDLE);

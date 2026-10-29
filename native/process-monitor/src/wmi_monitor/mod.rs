@@ -1,3 +1,13 @@
+//! Deprecated WMI process monitor, retained as historical source only.
+//!
+//! Replaced by native Win32 polling in PR #520 after the event-loss and
+//! short-lived-process detection issues discussed in #507.
+//! This directory is intentionally outside the module tree and is not compiled.
+//! The original implementation and host dependencies are preserved for reference.
+//!
+//! Replacement: https://github.com/ximu3/vnite/pull/520
+//! Rationale: https://github.com/ximu3/vnite/issues/507
+
 use tokio::{
   sync::{broadcast, mpsc},
   task,

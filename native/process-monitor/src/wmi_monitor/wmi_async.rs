@@ -1,3 +1,9 @@
+//! Deprecated WMI event subscription implementation; historical source only.
+//!
+//! Replaced by native polling: https://github.com/ximu3/vnite/pull/520
+//! Background and known limitations: https://github.com/ximu3/vnite/issues/507
+//! This file is not part of the compiled module tree.
+
 use std::ffi::c_void;
 use tokio::sync::{
   broadcast,
