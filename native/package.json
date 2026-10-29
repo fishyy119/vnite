@@ -22,9 +22,9 @@
   },
   "scripts": {
     "artifacts": "napi artifacts",
-    "build": "napi build --platform --release -o dist",
-    "build:debug": "napi build --platform -o dist",
-    "format:rs": "cargo fmt",
+    "build": "napi build --package vnite_native --platform --release -o dist",
+    "build:debug": "napi build --package vnite_native --platform -o dist",
+    "format:rs": "cargo fmt --all",
     "version": "napi version",
     "test": "tsx test.ts"
   },
