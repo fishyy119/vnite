@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use windows::{
   core,
   Win32::{
@@ -18,7 +18,7 @@ static HOOK_THREAD: Mutex<Option<std::thread::JoinHandle<()>>> = Mutex::new(None
 // the underlying platform’s notion of the hook thread identifier
 static HOOK_THREAD_OS_ID: Mutex<Option<u32>> = Mutex::new(None);
 
-pub fn install_foreground_hook(tx: mpsc::Sender<u32>) -> Result<(), String> {
+pub async fn install_foreground_hook(tx: mpsc::Sender<u32>) -> Result<(), String> {
   if let (Ok(sender), Ok(thread), Ok(thread_id)) =
     (SENDER.lock(), HOOK_THREAD.lock(), HOOK_THREAD_OS_ID.lock())
   {
@@ -36,6 +36,7 @@ pub fn install_foreground_hook(tx: mpsc::Sender<u32>) -> Result<(), String> {
     *sender_guard = Some(tx);
   }
 
+  let (startup_tx, startup_rx) = oneshot::channel();
   {
     let mut hook_guard = HOOK_THREAD
       .lock()
@@ -45,17 +46,20 @@ pub fn install_foreground_hook(tx: mpsc::Sender<u32>) -> Result<(), String> {
       if let Ok(mut thread_id_guard) = HOOK_THREAD_OS_ID.lock() {
         *thread_id_guard = Some(Threading::GetCurrentThreadId());
       } else {
-        log::error("failed to lock OS thread id");
+        let _ = startup_tx.send(Err("failed to lock OS thread id".to_string()));
         return;
       }
-      hook_thread_loop();
+      hook_thread_loop(startup_tx);
     }));
   }
 
-  Ok(())
+  // Report the Windows hook installation result, not just successful thread creation.
+  startup_rx
+    .await
+    .map_err(|_| "foreground hook thread exited before installation completed".to_string())?
 }
 
-unsafe fn hook_thread_loop() {
+unsafe fn hook_thread_loop(startup: oneshot::Sender<Result<(), String>>) {
   log::info("foreground hook message loop thread was spawned");
   // install hook
   let hook = Accessibility::SetWinEventHook(
@@ -68,12 +72,17 @@ unsafe fn hook_thread_loop() {
     WindowsAndMessaging::WINEVENT_OUTOFCONTEXT,
   );
   if hook.is_invalid() {
-    log::error("failed to install EVENT_SYSTEM_FOREGROUND hook");
+    let _ = startup.send(Err(
+      "failed to install EVENT_SYSTEM_FOREGROUND hook".to_string(),
+    ));
     return;
   }
   log::info("successfully installed EVENT_SYSTEM_FOREGROUND hook");
 
   let mut msg = WindowsAndMessaging::MSG::default();
+  // Create the message queue before reporting readiness so uninstall can post WM_QUIT.
+  let _ = WindowsAndMessaging::PeekMessageW(&mut msg, None, 0, 0, WindowsAndMessaging::PM_NOREMOVE);
+  let _ = startup.send(Ok(()));
   // start message loop for this thread
   loop {
     let result = WindowsAndMessaging::GetMessageW(&mut msg, None, 0, 0);
@@ -205,7 +214,7 @@ unsafe extern "system" fn win_foreground_callback(
 ///
 /// For regular desktop apps: Returns PID directly from window handle (1 API call)
 /// For UWP apps: Checks first visible child window with different PID (typically 1-6 iterations)
-/// 
+///
 /// This function is not used now but is retained here for potential future use.
 #[allow(dead_code)]
 unsafe fn get_actual_foreground_pid(hwnd: Foundation::HWND) -> u32 {

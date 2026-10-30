@@ -28,13 +28,22 @@ impl Polling {
 
   /// Update process cache. This function is designed to be invoked at a specific interval
   pub async fn update_process_status(&mut self) {
+    let pids = match win32::get_all_process_pid() {
+      Ok(pids) => pids,
+      Err(error) => {
+        self
+          .logger
+          .error(&format!("failed to enumerate processes: {error}"));
+        return;
+      }
+    };
     // mark all processes as unpinned before updating
     self.process_cache.iter_mut().for_each(|(_, process)| {
       process.pinned = false;
     });
 
     // get all processes and update cache, new processes will be marked as pinned, while old processes that are not found will be removed later
-    for pid in win32::get_all_process_pid() {
+    for pid in pids {
       if let Some(process) = self.process_cache.get_mut(&pid) {
         // an existing process is found, mark it as pinned
         process.pinned = true;

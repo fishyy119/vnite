@@ -106,14 +106,11 @@ pub fn get_all_process() -> Vec<ProcessInfo> {
 }
 
 /// Get all process (PID only)
-pub fn get_all_process_pid() -> Vec<u32> {
+pub fn get_all_process_pid() -> windows::core::Result<Vec<u32>> {
   let mut processes: Vec<u32> = Vec::with_capacity(512);
 
   unsafe {
-    let snapshot = match CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
-      Ok(handle) => handle,
-      Err(_) => return processes,
-    };
+    let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)?;
 
     let _snapshot_guard = HandleGuard::new(snapshot);
 
@@ -122,20 +119,24 @@ pub fn get_all_process_pid() -> Vec<u32> {
       ..Default::default()
     };
 
-    if Process32FirstW(snapshot, &mut proc_entry).is_ok() {
+    Process32FirstW(snapshot, &mut proc_entry)?;
+    {
       loop {
         let pid = proc_entry.th32ProcessID;
         processes.push(pid);
 
         // Get the next process
-        if Process32NextW(snapshot, &mut proc_entry).is_err() {
+        if let Err(error) = Process32NextW(snapshot, &mut proc_entry) {
+          if error.code() != windows::Win32::Foundation::ERROR_NO_MORE_FILES.to_hresult() {
+            return Err(error);
+          }
           break;
         }
       }
     }
   }
 
-  processes
+  Ok(processes)
 }
 
 /// Get full path of a process using a given PID

@@ -1,17 +1,29 @@
-use napi::bindgen_prelude::Buffer;
+use napi::bindgen_prelude::{Buffer, Status};
 use napi_derive::napi;
+use windows::Win32::Foundation::ERROR_CANCELLED;
 
 use crate::win32;
 
-#[napi(object)]
-pub struct ProcessInfo {
-  pub pid: u32,
-  pub full_path: String,
+#[napi(js_name = "getProcessPath")]
+pub fn get_process_path(pid: u32) -> String {
+  win32::get_process_full_path_by_pid(pid)
 }
 
-#[napi(js_name = "getAllProcess")]
-pub fn get_all_process() -> Vec<ProcessInfo> {
-  win32::get_all_process()
+#[napi(js_name = "launchElevated")]
+pub async fn launch_elevated(exe: String, args: Vec<String>) -> napi::Result<u32> {
+  // Keep the blocking UAC wait off the async runtime's worker threads. COM
+  // initialization and launch stay together on the blocking thread.
+  tokio::task::spawn_blocking(move || win32::launch_elevated(&exe, &args))
+    .await
+    .map_err(|_| napi::Error::from_reason("Monitor launch task failed"))?
+    .map_err(|code| {
+      let status = if code == ERROR_CANCELLED.0 {
+        Status::Cancelled
+      } else {
+        Status::GenericFailure
+      };
+      napi::Error::new(status, format!("Monitor launch failed ({code})"))
+    })
 }
 
 #[napi(js_name = "isElevatedPrivilege")]

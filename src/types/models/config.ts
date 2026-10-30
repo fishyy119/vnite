@@ -39,6 +39,7 @@ export interface configDocs {
     hideWindowAfterGameStart: boolean
     showWindowAfterGameExit: boolean
     enableForegroundTimer: boolean
+    enhancedProcessMonitoring: boolean
     foregroundWaitTime: number
     ignoreShortInterruptions: number
     ignoreShortSessions: number
@@ -373,6 +374,7 @@ export const DEFAULT_CONFIG_VALUES: Readonly<configDocs> = {
     hideWindowAfterGameStart: true,
     showWindowAfterGameExit: true,
     enableForegroundTimer: true,
+    enhancedProcessMonitoring: false,
     foregroundWaitTime: 10,
     ignoreShortInterruptions: 0,
     ignoreShortSessions: 0

@@ -1,20 +1,12 @@
 mod icon;
 mod notification;
 mod privilege;
+mod process;
 
-use crate::{log, napi_win32::ProcessInfo};
-
-pub fn get_all_process() -> Vec<ProcessInfo> {
-  vnite_process_monitor::win32::get_all_process()
-    .into_iter()
-    .map(|process| ProcessInfo {
-      pid: process.pid,
-      full_path: process.full_path,
-    })
-    .collect()
-}
-
+pub use process::launch_elevated;
 pub use vnite_process_monitor::win32::get_process_full_path_by_pid;
+
+use crate::log;
 
 pub fn extract_executable_icon(path: &str) -> Result<Vec<u8>, String> {
   icon::extract_executable_icon(path)

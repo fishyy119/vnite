@@ -12,19 +12,18 @@ chrono = "0.4.42"
 napi = { version = "3.0.0", features = ["async"] }
 napi-derive = "3.0.0"
 quick-xml = "0.38.3"
-regex = "1.12.2"
 tokio = { version = "1.47.1", features = ["full"] }
 windows = { version = "0.62", features = [
-  "Win32_System_Diagnostics_ToolHelp",
   "Win32_System_Threading",
+  "Win32_System_Com",
+  "Win32_System_Registry",
   "Win32_Security",
   "UI_Notifications",
   "Data_Xml_Dom",
   "Win32_UI_Accessibility",
   "Win32_UI_WindowsAndMessaging",
+  "Win32_UI_Shell",
   "Win32_Foundation",
-  "Win32_System_Diagnostics_Etw",
-  "Win32_System_Time",
   "Win32_System_LibraryLoader",
   "Win32_Storage_FileSystem"
 ] }

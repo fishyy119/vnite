@@ -329,7 +329,11 @@ impl EtwTrace {
     // clean handles, drop context
     self.session_handle = Etw::CONTROLTRACE_HANDLE { Value: 0 };
     self.trace_handle = Etw::PROCESSTRACE_HANDLE { Value: 0 };
-    self.consumer_handle.take();
+    // CloseTrace may return before the callback finishes. Keep its context alive
+    // until ProcessTrace has returned on the consumer thread.
+    if let Some(handle) = self.consumer_handle.take() {
+      let _ = handle.join();
+    }
     self.context.take();
 
     Ok(())
