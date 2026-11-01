@@ -9,14 +9,13 @@ import { Mutex } from 'async-mutex'
 import { spawn } from 'child_process'
 import { BrowserWindow, ipcMain } from 'electron'
 import log from 'electron-log/main.js'
-import path from 'path'
 import * as native from 'vnite-native'
 import { baseDBManager, ConfigDBManager, GameDBManager } from '~/core/database'
 import { eventBus } from '~/core/events'
 import { ipcManager } from '~/core/ipc'
 import { ActiveGameInfo, backupGameSave } from '~/features/game'
 import { updateRecentGamesInTray } from '~/features/system'
-import { psManager, simulateHotkey, toPowerShellStringLiteral } from '~/utils'
+import { simulateHotkey } from '~/utils'
 import {
   refreshCollector,
   setEnhancedMonitoring,
@@ -278,10 +277,15 @@ async function startGameSession(gameId: string, path?: string, pid?: number): Pr
     const registered = session
     ipcMain.handle(`stop-game-${gameId}`, async (_event, requestedGameId: string) => {
       if (requestedGameId !== gameId || sessions.get(gameId) !== registered) return
-      if (await registered.terminateProcesses()) {
-        finishGameSession(gameId, registered)
-        await refreshTimerStatus()
+      try {
+        if (!(await registered.terminateProcesses())) return
+      } catch (error) {
+        // Process termination failure must not interrupt the remaining finalization steps.
+        // Manual stop is the user's last resort for ending the timer when normal exit handling fails.
+        log.warn(`[Monitor] Process termination failed for game ${gameId}`, error)
       }
+      finishGameSession(gameId, registered)
+      await refreshTimerStatus()
     })
     sessions.set(gameId, session)
   }
@@ -394,51 +398,12 @@ class GameSession {
   public async terminateProcesses(): Promise<boolean> {
     if (this.stopping) return false
     this.stopping = true
-    return this.mutex.runExclusive(async () => {
-      for (const process of this.monitoredProcesses) {
-        if (process.isRunning) await this.terminateProcess(process)
-      }
-      return true
-    })
-  }
-
-  private async terminateProcess(process: MonitoredProcess): Promise<boolean> {
-    try {
-      // Normalize the path
-      const normalizedPath = this.normalizePath(process.path)
-      const pathLiteral = toPowerShellStringLiteral(normalizedPath)
-      const processName = path.basename(normalizedPath)
-
-      console.log(`Try to terminate process: ${normalizedPath}`)
-
-      try {
-        // Use PowerShell to terminate the process by exact path
-        const psCommand = `Get-Process | Where-Object {$_.Path -eq ${pathLiteral}} | Stop-Process -Force`
-        await psManager.executeCommand(psCommand)
-        console.log(`Process ${processName} has been terminated successfully.`)
-        return true
-      } catch (error) {
-        const errorMessage = (error as any)?.message?.toLowerCase() || ''
-
-        // If the process does not exist, consider it terminated successfully
-        if (
-          errorMessage.includes('不存在') ||
-          errorMessage.includes('找不到') ||
-          errorMessage.includes('no process') ||
-          errorMessage.includes('cannot find') ||
-          errorMessage.includes('没有找到进程')
-        ) {
-          console.log(`Process ${processName} does not exist anymore.`)
-          return true
-        }
-
-        console.error(`Failed to terminate process ${processName}:`, error)
-        return false
-      }
-    } catch (error) {
-      console.error('Failed to terminate process:', error)
-      return false
-    }
+    // Snapshot under the lock, then release it before the native call can show UAC.
+    const paths = await this.mutex.runExclusive(() =>
+      this.monitoredProcesses.filter((process) => process.isRunning).map((process) => process.path)
+    )
+    await native.terminateProcesses([...new Set(paths)])
+    return true
   }
 
   public pushForegroundChange(eventType: TimerStatus): void {
@@ -515,19 +480,6 @@ class GameSession {
       return false
     })
     return isAllExited
-  }
-
-  // Adding a path normalization method
-  private normalizePath(filePath: string): string {
-    try {
-      return path
-        .normalize(filePath)
-        .toLowerCase()
-        .replace(/\\+/g, '\\') // Normalized backslash
-        .replace(/^["']|["']$/g, '') // Remove opening and closing quotation marks
-    } catch {
-      return filePath.toLowerCase()
-    }
   }
 
   private async restoreWindowAfterGameExit(): Promise<void> {

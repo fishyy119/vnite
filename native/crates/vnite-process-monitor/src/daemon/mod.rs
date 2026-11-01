@@ -132,7 +132,7 @@ fn snapshot() -> Result<Vec<Value>, Failure> {
   Ok(
     win32::get_all_process_pid()?
       .into_iter()
-      .map(|pid| json!({"pid":pid, "path":win32::get_process_full_path_by_pid(pid)}))
+      .map(|pid| json!({"pid":pid, "path":win32::query_process_path_by_pid(pid).unwrap_or_default()}))
       .collect(),
   )
 }

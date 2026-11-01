@@ -1,35 +1,9 @@
-use windows::Win32::{
-  Foundation::{CloseHandle, HANDLE},
-  System::{
-    Diagnostics::ToolHelp::{
-      CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
-      TH32CS_SNAPPROCESS,
-    },
-    Threading::{
-      OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
-      PROCESS_QUERY_LIMITED_INFORMATION,
-    },
-  },
+use vnite_win32::{query_process_path_by_pid, HandleGuard};
+use windows::Win32::System::Diagnostics::ToolHelp::{
+  CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
 };
 
 use crate::ProcessInfo;
-
-// RAII wrapper for Windows handles to ensure they're always closed
-struct HandleGuard(HANDLE);
-
-impl HandleGuard {
-  fn new(handle: HANDLE) -> Self {
-    HandleGuard(handle)
-  }
-}
-
-impl Drop for HandleGuard {
-  fn drop(&mut self) {
-    unsafe {
-      let _ = CloseHandle(self.0);
-    }
-  }
-}
 
 /// Get all process infomation (pid, full path)
 pub fn get_all_process() -> Vec<ProcessInfo> {
@@ -58,36 +32,9 @@ pub fn get_all_process() -> Vec<ProcessInfo> {
         let pid = proc_entry.th32ProcessID;
 
         // Try to get the full path of the process
-        let proc_full_path = match OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
-          Ok(process_handle) => {
-            // Use RAII guard to ensure handle is always closed
-            let _handle_guard = HandleGuard::new(process_handle);
-
-            // Use larger buffer to prevent truncation
-            let mut buffer = [0u16; 512]; // Increased buffer size
-            let mut size = buffer.len() as u32;
-
-            let success = QueryFullProcessImageNameW(
-              process_handle,
-              PROCESS_NAME_WIN32,
-              windows::core::PWSTR(buffer.as_mut_ptr()),
-              &mut size,
-            );
-
-            if success.is_ok() && size > 0 && (size as usize) <= buffer.len() {
-              // Safe bounds check before slicing
-              let safe_size = std::cmp::min(size as usize, buffer.len());
-              String::from_utf16_lossy(&buffer[..safe_size])
-            } else {
-              // Fallback to process name if we can't get the full path
-              get_process_name_fallback(&proc_entry)
-            }
-          }
-          Err(_) => {
-            // Fallback to process name if we can't open the process
-            get_process_name_fallback(&proc_entry)
-          }
-        };
+        // Fallback to process name if we can't open the process or get the full path
+        let proc_full_path =
+          query_process_path_by_pid(pid).unwrap_or_else(|_| get_process_name_fallback(&proc_entry));
 
         processes.push(ProcessInfo {
           pid,
@@ -137,33 +84,6 @@ pub fn get_all_process_pid() -> windows::core::Result<Vec<u32>> {
   }
 
   Ok(processes)
-}
-
-/// Get full path of a process using a given PID
-pub fn get_process_full_path_by_pid(pid: u32) -> String {
-  unsafe {
-    match OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
-      Ok(handle) => {
-        let _handle_guard = HandleGuard::new(handle);
-        let mut buffer = [0u16; 256];
-        let mut size = buffer.len() as u32;
-        let success = QueryFullProcessImageNameW(
-          handle,
-          PROCESS_NAME_WIN32,
-          windows::core::PWSTR(buffer.as_mut_ptr()),
-          &mut size,
-        );
-        if success.is_ok() && size > 0 {
-          // Safe bounds check before slicing
-          let safe_size = std::cmp::min(size as usize, buffer.len());
-          String::from_utf16_lossy(&buffer[..safe_size])
-        } else {
-          String::new()
-        }
-      }
-      Err(_) => String::new(),
-    }
-  }
 }
 
 // Helper function to safely extract process name from proc_entry

@@ -1,11 +1,14 @@
 use std::mem::size_of;
+use vnite_win32::HandleGuard;
 use windows::{
   core::{w, HSTRING, PCWSTR},
   Win32::{
-    Foundation::{CloseHandle, GetLastError, ERROR_INVALID_HANDLE, ERROR_INVALID_PARAMETER},
+    Foundation::{
+      GetLastError, ERROR_INVALID_HANDLE, ERROR_INVALID_PARAMETER, WAIT_OBJECT_0, WAIT_TIMEOUT,
+    },
     System::{
       Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE},
-      Threading::GetProcessId,
+      Threading::{GetExitCodeProcess, GetProcessId, WaitForSingleObject},
     },
     UI::{
       Shell::{
@@ -50,7 +53,33 @@ fn quote(value: &str) -> String {
   result
 }
 
+/// Launch an elevated process and return its PID without waiting for exit.
 pub fn launch_elevated(exe: &str, args: &[String]) -> Result<u32, u32> {
+  let process = start_elevated(exe, args)?;
+  let pid = unsafe { GetProcessId(process.0) };
+  if pid == 0 {
+    Err(unsafe { GetLastError() }.0)
+  } else {
+    Ok(pid)
+  }
+}
+
+/// Execute an elevated command and return its exit code (30-second execution timeout).
+pub fn execute_elevated(exe: &str, args: &[String]) -> Result<u32, u32> {
+  let process = start_elevated(exe, args)?;
+  match unsafe { WaitForSingleObject(process.0, 30_000) } {
+    WAIT_OBJECT_0 => {
+      let mut code = 0;
+      unsafe { GetExitCodeProcess(process.0, &mut code) }
+        .map_err(|error| error.code().0 as u32 & 0xffff)?;
+      Ok(code)
+    }
+    WAIT_TIMEOUT => Err(WAIT_TIMEOUT.0),
+    _ => Err(unsafe { GetLastError() }.0),
+  }
+}
+
+fn start_elevated(exe: &str, args: &[String]) -> Result<HandleGuard, u32> {
   if exe.is_empty() || exe.contains('\0') || args.iter().any(|arg| arg.contains('\0')) {
     return Err(ERROR_INVALID_PARAMETER.0);
   }
@@ -80,16 +109,7 @@ pub fn launch_elevated(exe: &str, args: &[String]) -> Result<u32, u32> {
   if info.hProcess.is_invalid() {
     return Err(ERROR_INVALID_HANDLE.0);
   }
-  let pid = unsafe { GetProcessId(info.hProcess) };
-  let result = if pid == 0 {
-    Err(unsafe { GetLastError() }.0)
-  } else {
-    Ok(pid)
-  };
-  unsafe {
-    let _ = CloseHandle(info.hProcess);
-  }
-  result
+  Ok(HandleGuard(info.hProcess))
 }
 
 #[cfg(test)]

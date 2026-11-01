@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/vnite-native", "crates/vnite-process-monitor"]
+members = ["crates/vnite-native", "crates/vnite-process-monitor", "crates/vnite-win32"]
 resolver = "2"
 
 [profile.release]

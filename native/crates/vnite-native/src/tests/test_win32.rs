@@ -3,10 +3,10 @@ use crate::win32;
 #[test]
 fn test_get_process_path() {
   assert_eq!(
-    win32::get_process_full_path_by_pid(std::process::id()),
+    win32::query_process_path_by_pid(std::process::id()).unwrap(),
     std::env::current_exe().unwrap().to_string_lossy()
   );
-  assert!(win32::get_process_full_path_by_pid(0).is_empty());
+  assert!(win32::query_process_path_by_pid(0).is_err());
 }
 
 #[test]

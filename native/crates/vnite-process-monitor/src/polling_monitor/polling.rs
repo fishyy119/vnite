@@ -49,7 +49,7 @@ impl Polling {
         process.pinned = true;
       } else {
         // a new process is found, add it to cache and mark it as pinned
-        let path = win32::get_process_full_path_by_pid(pid);
+        let path = win32::query_process_path_by_pid(pid).unwrap_or_default();
         let accessible = !path.is_empty();
         self.process_cache.insert(
           pid,

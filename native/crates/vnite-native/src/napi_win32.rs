@@ -6,7 +6,7 @@ use crate::win32;
 
 #[napi(js_name = "getProcessPath")]
 pub fn get_process_path(pid: u32) -> String {
-  win32::get_process_full_path_by_pid(pid)
+  win32::query_process_path_by_pid(pid).unwrap_or_default()
 }
 
 #[napi(js_name = "launchElevated")]
@@ -15,14 +15,30 @@ pub async fn launch_elevated(exe: String, args: Vec<String>) -> napi::Result<u32
   // initialization and launch stay together on the blocking thread.
   tokio::task::spawn_blocking(move || win32::launch_elevated(&exe, &args))
     .await
-    .map_err(|_| napi::Error::from_reason("Monitor launch task failed"))?
+    .map_err(|_| napi::Error::from_reason("Elevated launch task failed"))?
     .map_err(|code| {
       let status = if code == ERROR_CANCELLED.0 {
         Status::Cancelled
       } else {
         Status::GenericFailure
       };
-      napi::Error::new(status, format!("Monitor launch failed ({code})"))
+      napi::Error::new(status, format!("Elevated launch failed ({code})"))
+    })
+}
+
+/// Requests termination of matching paths, requesting elevation only when needed.
+#[napi(js_name = "terminateProcesses")]
+pub async fn terminate_processes(paths: Vec<String>) -> napi::Result<()> {
+  tokio::task::spawn_blocking(move || win32::terminate_processes(&paths))
+    .await
+    .map_err(|_| napi::Error::from_reason("Process termination task failed"))?
+    .map_err(|error| {
+      let status = if error.code() == ERROR_CANCELLED.to_hresult() {
+        Status::Cancelled
+      } else {
+        Status::GenericFailure
+      };
+      napi::Error::new(status, format!("Process termination failed: {error}"))
     })
 }
 

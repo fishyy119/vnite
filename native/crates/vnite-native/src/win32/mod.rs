@@ -2,9 +2,11 @@ mod icon;
 mod notification;
 mod privilege;
 mod process;
+mod terminate;
 
 pub use process::launch_elevated;
-pub use vnite_process_monitor::win32::get_process_full_path_by_pid;
+pub use terminate::terminate_processes;
+pub use vnite_win32::query_process_path_by_pid;
 
 use crate::log;
 

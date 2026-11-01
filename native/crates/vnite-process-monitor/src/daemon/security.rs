@@ -1,5 +1,6 @@
 use std::{ffi::c_void, os::windows::io::AsRawHandle};
 use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
+use vnite_win32::HandleGuard;
 use windows::{
   core::*,
   Win32::{
@@ -8,15 +9,6 @@ use windows::{
     System::{Pipes::*, Threading::*},
   },
 };
-
-pub struct HandleGuard(pub HANDLE);
-impl Drop for HandleGuard {
-  fn drop(&mut self) {
-    unsafe {
-      let _ = CloseHandle(self.0);
-    }
-  }
-}
 
 pub fn open_parent(pid: u32) -> Result<HandleGuard> {
   let handle = HandleGuard(unsafe {
